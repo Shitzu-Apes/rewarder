@@ -1,3 +1,4 @@
+mod token_receiver;
 mod view;
 
 // Find all our documentation at https://docs.near.org
@@ -11,6 +12,7 @@ use near_sdk::{
 // Define the contract structure
 #[near(contract_state)]
 pub struct Contract {
+    reward_token: AccountId,
     total_out: u128,
     total_received: u128,
     ranking: TreeMap<u128, Vec<AccountId>>,
@@ -18,10 +20,12 @@ pub struct Contract {
     count: u128,
 }
 
-// Define the default, which automatically initializes the contract
-impl Default for Contract {
-    fn default() -> Self {
+#[near]
+impl Contract {
+    #[init]
+    pub fn new(reward_token: AccountId) -> Self {
         Self {
+            reward_token,
             total_out: 0,
             total_received: 0,
             ranking: TreeMap::new(b"r".to_vec()),
@@ -29,12 +33,7 @@ impl Default for Contract {
             count: 0,
         }
     }
-}
 
-// Implement the contract structure
-#[near]
-impl Contract {
-    // Send rewards to the user
     #[private]
     pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
         // Check
@@ -71,7 +70,7 @@ impl Contract {
         );
 
         // Interaction
-        ext_ft_core::ext("token.0xshitzu.near".parse().unwrap())
+        ext_ft_core::ext(self.reward_token.clone())
             .with_unused_gas_weight(1)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(account_id.clone(), amount.into(), None);
@@ -84,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_send_rewards() {
-        let mut contract = Contract::default();
+        let mut contract = Contract::new("token.0xshitzu.near".parse().unwrap());
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let bob_id: AccountId = "bob.near".parse().unwrap();
         let charlie_id: AccountId = "charlie.near".parse().unwrap();
