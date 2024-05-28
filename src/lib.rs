@@ -13,11 +13,16 @@ use near_sdk::{
 #[near(contract_state)]
 pub struct Contract {
     reward_token: AccountId,
-    total_out: u128,
-    total_received: u128,
+
+    total_distribute: u128,
+    scores: LookupMap<AccountId, u128>,
     ranking: TreeMap<u128, Vec<AccountId>>,
-    score: LookupMap<AccountId, u128>,
-    count: u128,
+    participant_count: u128,
+
+    total_received: u128,
+    donation_amounts: LookupMap<AccountId, u128>,
+    donor_ranking: TreeMap<u128, Vec<AccountId>>,
+    donor_count: u128,
 }
 
 #[near]
@@ -26,11 +31,16 @@ impl Contract {
     pub fn new(reward_token: AccountId) -> Self {
         Self {
             reward_token,
-            total_out: 0,
-            total_received: 0,
+
+            total_distribute: 0,
             ranking: TreeMap::new(b"r".to_vec()),
-            score: LookupMap::new(b"s".to_vec()),
-            count: 0,
+            scores: LookupMap::new(b"s".to_vec()),
+            participant_count: 0,
+
+            total_received: 0,
+            donation_amounts: LookupMap::new(b"d".to_vec()),
+            donor_ranking: TreeMap::new(b"dr".to_vec()),
+            donor_count: 0,
         }
     }
 
@@ -38,16 +48,18 @@ impl Contract {
     pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
         // Check
         assert!(
-            self.total_out + amount <= self.total_received,
+            self.total_distribute + amount <= self.total_received,
             "Not enough funds"
         );
 
         // Effect
-        self.total_out += amount;
-        self.total_received -= amount;
-        let score = self.score.get(&account_id).unwrap_or(&0);
-        self.score.set(account_id.clone(), Some(score + amount));
-        let score = self.score.get(&account_id).unwrap();
+        self.total_distribute += amount;
+        let score = self.scores.get(&account_id).unwrap_or_else(|| {
+            self.participant_count += 1;
+            &0
+        });
+        self.scores.set(account_id.clone(), Some(score + amount));
+        let score = self.scores.get(&account_id).unwrap();
 
         let mut ranking = self.ranking.get(&score).unwrap_or(&Vec::new()).clone();
         ranking.push(account_id.clone());
@@ -57,7 +69,7 @@ impl Contract {
             .ranking
             .iter()
             .position(|x| x.0 == score)
-            .unwrap_or(self.count as usize)
+            .unwrap_or(self.participant_count as usize)
             .try_into()
             .unwrap();
 
@@ -113,6 +125,8 @@ mod tests {
         assert_eq!(get_rank(&contract, dan_id.clone()), 2);
         assert_eq!(get_rank(&contract, charlie_id.clone()), 2);
         assert_eq!(rank, 3);
+
+        assert_eq!(contract.participant_count, 4);
     }
 
     fn send_and_get_rank(contract: &mut Contract, account_id: AccountId, amount: u128) -> u128 {
@@ -122,7 +136,7 @@ mod tests {
     }
 
     fn get_rank(contract: &Contract, account_id: AccountId) -> u128 {
-        let score = contract.score.get(&account_id).unwrap();
+        let score = contract.scores.get(&account_id).unwrap();
         let rank = contract.ranking.iter().position(|x| x.0 == score).unwrap();
         rank as u128
     }
