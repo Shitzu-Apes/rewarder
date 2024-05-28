@@ -1,3 +1,5 @@
+mod view;
+
 // Find all our documentation at https://docs.near.org
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{
