@@ -22,10 +22,11 @@ impl FungibleTokenReceiver for Contract {
 
         if let Some(token_id) = self.primary_nft.get(&sender_id) {
             log!(
-                "{} sent {} tokens with message: {}",
+                "{} sent {} tokens with message: {}, for NFT {}",
                 sender_id,
                 amount.0,
-                msg
+                msg,
+                token_id
             );
 
             let donation_amount = self.donation_amounts.get(token_id).unwrap_or_else(|| {
@@ -91,43 +92,63 @@ impl NonFungibleTokenReceiver for Contract {
 #[cfg(test)]
 mod tests {
     use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::testing_env;
+    use near_sdk::{testing_env, NearToken};
 
     use super::*;
 
-    // #[test]
-    // fn test_ft_on_transfer() {
-    //     let reward_token: AccountId = "reward_token".parse().unwrap();
+    #[test]
+    fn test_ft_on_transfer_without_nft() {
+        let reward_token: AccountId = "reward_token".parse().unwrap();
+        let nft: AccountId = "nft".parse().unwrap();
+        let alice = accounts(1);
 
-    //     let mut contract = Contract::new(reward_token, "nft".parse().unwrap());
-    //     let context = VMContextBuilder::new()
-    //         .predecessor_account_id("not_reward_token".parse().unwrap())
-    //         .attached_deposit(NearToken::from_yoctonear(1))
-    //         .build();
-    //     testing_env!(context.clone());
+        // Alice stakes NFT 1
+        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(reward_token.clone())
+            .attached_deposit(NearToken::from_yoctonear(1))
+            .build();
 
-    //     // Test when sender is not the reward token
-    //     contract.ft_on_transfer(accounts(1), 5.into(), "".into());
-    //     assert_eq!(contract.total_received, 0);
-    //     assert_eq!(contract.donor_count, 0);
-    //     assert_eq!(contract.donation_amounts.get(&accounts(1)), None);
-    //     assert_eq!(contract.donor_ranking.get(&0), None);
+        let amount = 1000 * 10_u128.pow(18);
+        testing_env!(context.clone());
+        contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
 
-    //     // Test when sender is the reward token
-    //     let context = VMContextBuilder::new()
-    //         .predecessor_account_id(reward_token.clone())
-    //         .attached_deposit(NearToken::from_yoctonear(1))
-    //         .build();
-    //     contract.ft_on_transfer(accounts(0), 5.into(), "Test".to_string());
-    //     assert_eq!(contract.total_received, 5);
-    //     assert_eq!(contract.donor_count, 1);
-    //     assert_eq!(contract.donation_amounts.get(&accounts(0)), Some(5));
-    //     assert_eq!(
-    //         contract.donor_ranking.get(&5),
-    //         Some(vec![accounts(0).to_string()])
-    //     );
-    //     assert_eq!(contract.donor_ranking.get(&0), None);
-    // }
+        assert_eq!(contract.total_received, amount);
+    }
+
+    #[test]
+    fn test_ft_on_transfer_with_nft() {
+        let reward_token: AccountId = "reward_token".parse().unwrap();
+        let nft: AccountId = "nft".parse().unwrap();
+        let alice = accounts(1);
+
+        // Alice stakes NFT 1
+        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(nft.clone())
+            .build();
+        testing_env!(context.clone());
+
+        testing_env!(context.clone());
+        contract.nft_on_transfer(accounts(0), alice.clone(), "1".to_string(), "".to_string());
+        // Alice successfully stake NFT 1
+
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(reward_token.clone())
+            .attached_deposit(NearToken::from_yoctonear(1))
+            .build();
+
+        let amount = 1000 * 10_u128.pow(18);
+        testing_env!(context.clone());
+        contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
+
+        assert_eq!(contract.total_received, amount);
+
+        let score = contract.donation_amounts.get(&"1".to_string());
+        assert_eq!(score, Some(&amount));
+
+        assert_eq!(contract.donor_count, 1);
+    }
 
     #[test]
     #[should_panic]
