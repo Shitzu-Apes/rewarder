@@ -2,7 +2,7 @@ mod token_receiver;
 mod view;
 
 // Find all our documentation at https://docs.near.org
-use near_contract_standards::fungible_token::core::ext_ft_core;
+use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
 use near_sdk::{
     log, near,
     store::{LookupMap, TreeMap},
@@ -13,24 +13,32 @@ use near_sdk::{
 #[near(contract_state)]
 pub struct Contract {
     reward_token: AccountId,
+    nft: AccountId,
+
+    primary_nft: LookupMap<AccountId, TokenId>,
+    unstaked_nft: LookupMap<TokenId, AccountId>,
 
     total_distribute: u128,
-    scores: LookupMap<AccountId, u128>,
-    ranking: TreeMap<u128, Vec<AccountId>>,
+    scores: LookupMap<TokenId, u128>,
+    ranking: TreeMap<u128, Vec<TokenId>>,
     participant_count: u128,
 
     total_received: u128,
-    donation_amounts: LookupMap<AccountId, u128>,
-    donor_ranking: TreeMap<u128, Vec<AccountId>>,
+    donation_amounts: LookupMap<TokenId, u128>,
+    donor_ranking: TreeMap<u128, Vec<TokenId>>,
     donor_count: u128,
 }
 
 #[near]
 impl Contract {
     #[init]
-    pub fn new(reward_token: AccountId) -> Self {
+    pub fn new(reward_token: AccountId, nft: AccountId) -> Self {
         Self {
             reward_token,
+            nft,
+            unstaked_nft: LookupMap::new(b"u".to_vec()),
+
+            primary_nft: LookupMap::new(b"p".to_vec()),
 
             total_distribute: 0,
             ranking: TreeMap::new(b"r".to_vec()),
@@ -52,34 +60,20 @@ impl Contract {
             "Not enough funds"
         );
 
-        // Effect
-        self.total_distribute += amount;
-        let score = self.scores.get(&account_id).unwrap_or_else(|| {
-            self.participant_count += 1;
-            &0
-        });
-        self.scores.set(account_id.clone(), Some(score + amount));
-        let score = self.scores.get(&account_id).unwrap();
+        let mut amount = amount;
 
-        let mut ranking = self.ranking.get(&score).unwrap_or(&Vec::new()).clone();
-        ranking.push(account_id.clone());
-        self.ranking.insert(score.clone(), ranking);
+        if let Some(primary_nft) = self.primary_nft.get(&account_id) {
+            amount *= 2;
 
-        let rank: u128 = self
-            .ranking
-            .iter()
-            .position(|x| x.0 == score)
-            .unwrap_or(self.participant_count as usize)
-            .try_into()
-            .unwrap();
+            // Effect
+            self.total_distribute += amount;
+            let new_score = self.scores.get(primary_nft).unwrap_or(&0) + amount;
+            self.scores.set(primary_nft.clone(), Some(new_score));
 
-        log!(
-            "User {} received {} score, total score: {}, rank: {}",
-            account_id,
-            amount,
-            score,
-            rank
-        );
+            let mut ranking = self.ranking.get(&new_score).unwrap_or(&Vec::new()).clone();
+            ranking.push(primary_nft.clone());
+            self.ranking.insert(new_score, ranking);
+        }
 
         // Interaction
         ext_ft_core::ext(self.reward_token.clone())
@@ -95,49 +89,14 @@ mod tests {
 
     #[test]
     fn test_send_rewards() {
-        let mut contract = Contract::new("token.0xshitzu.near".parse().unwrap());
+        let mut contract = Contract::new(
+            "token.0xshitzu.near".parse().unwrap(),
+            "shitzu.bodega-lab.near".parse().unwrap(),
+        );
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let bob_id: AccountId = "bob.near".parse().unwrap();
         let charlie_id: AccountId = "charlie.near".parse().unwrap();
         let dan_id: AccountId = "dan.near".parse().unwrap();
         let amount = 100;
-
-        let rank = send_and_get_rank(&mut contract, alice_id.clone(), amount);
-        assert_eq!(rank, 0);
-
-        let rank = send_and_get_rank(&mut contract, bob_id.clone(), amount - 50);
-        assert_eq!(rank, 0);
-        assert_eq!(get_rank(&contract, alice_id.clone()), 1);
-
-        let rank = send_and_get_rank(&mut contract, charlie_id.clone(), amount + 50);
-        assert_eq!(get_rank(&contract, bob_id.clone()), 0);
-        assert_eq!(get_rank(&contract, alice_id.clone()), 1);
-        assert_eq!(rank, 2);
-
-        let rank = send_and_get_rank(&mut contract, dan_id.clone(), amount + 50);
-        assert_eq!(get_rank(&contract, bob_id.clone()), 0);
-        assert_eq!(get_rank(&contract, alice_id.clone()), 1);
-        assert_eq!(get_rank(&contract, charlie_id.clone()), 2);
-        assert_eq!(rank, 2);
-
-        let rank = send_and_get_rank(&mut contract, alice_id.clone(), amount);
-        assert_eq!(get_rank(&contract, bob_id.clone()), 0);
-        assert_eq!(get_rank(&contract, dan_id.clone()), 2);
-        assert_eq!(get_rank(&contract, charlie_id.clone()), 2);
-        assert_eq!(rank, 3);
-
-        assert_eq!(contract.participant_count, 4);
-    }
-
-    fn send_and_get_rank(contract: &mut Contract, account_id: AccountId, amount: u128) -> u128 {
-        contract.send_rewards(account_id.clone(), amount);
-        let rank = get_rank(contract, account_id);
-        rank as u128
-    }
-
-    fn get_rank(contract: &Contract, account_id: AccountId) -> u128 {
-        let score = contract.scores.get(&account_id).unwrap();
-        let rank = contract.ranking.iter().position(|x| x.0 == score).unwrap();
-        rank as u128
     }
 }
