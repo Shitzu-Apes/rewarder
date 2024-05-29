@@ -60,6 +60,7 @@ impl FungibleTokenReceiver for Contract {
     }
 }
 
+#[near]
 impl NonFungibleTokenReceiver for Contract {
     fn nft_on_transfer(
         &mut self,
