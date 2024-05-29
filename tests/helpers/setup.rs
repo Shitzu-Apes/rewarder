@@ -54,7 +54,7 @@ pub async fn setup_nft(near: &Account) -> anyhow::Result<Contract> {
     log_tx_result(
         &format!("Deployed NFT contract nft"),
         contract
-            .call("new")
+            .call("new_init")
             .args_json(json!(
                 {
                     "owner_id": near.id(),

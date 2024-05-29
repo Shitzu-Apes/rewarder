@@ -89,3 +89,18 @@ pub async fn stake(
 
     Ok(())
 }
+
+pub async fn send_rewards(
+    contract: &Contract,
+    account_id: &AccountId,
+    amount: u128,
+) -> anyhow::Result<()> {
+    contract
+        .call("send_rewards")
+        .args_json((account_id, amount))
+        .transact()
+        .await?
+        .into_result()?;
+
+    Ok(())
+}
