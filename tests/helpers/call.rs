@@ -137,3 +137,21 @@ pub async fn unstake(staker: &Account, rewarder: &AccountId) -> anyhow::Result<(
 
     Ok(())
 }
+
+pub async fn donate(
+    donor: &Account,
+    token: &AccountId,
+    rewarder: &AccountId,
+    amount: U128,
+) -> anyhow::Result<()> {
+    donor
+        .call(token, "ft_transfer_call")
+        .args_json((rewarder, amount, "".to_string(), "".to_string()))
+        .deposit(NearToken::from_yoctonear(1))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+
+    Ok(())
+}

@@ -191,3 +191,34 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_donation_quadruple_score() -> anyhow::Result<()> {
+    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+
+    let [alice, bob, ..] = &accounts[..] else {
+        anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
+    };
+
+    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+
+    call::storage_deposit(&token, alice, None, None).await?;
+    call::storage_deposit(&token, bob, None, None).await?;
+    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+
+    call::mint_token(&token, alice.id(), amount).await?;
+
+    let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
+        anyhow::bail!("Expected at least 1 token, got 0")
+    };
+    call::stake(alice, rewarder.id(), &nft.id(), &nft_token.token_id).await?;
+
+    call::donate(&alice, token.id(), rewarder.id(), amount).await?;
+
+    assert_eq!(
+        view::score_of(&rewarder, nft_token.token_id.clone()).await?,
+        U128(amount.0 * 4)
+    );
+
+    Ok(())
+}
