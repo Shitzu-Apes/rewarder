@@ -3,6 +3,7 @@ use near_contract_standards::{
     non_fungible_token::{core::NonFungibleTokenReceiver, TokenId},
 };
 use near_sdk::{env, json_types::U128, log, near, AccountId, PromiseOrValue};
+use primitive_types::U256;
 
 use crate::{Contract, ContractExt};
 
@@ -23,7 +24,7 @@ impl FungibleTokenReceiver for Contract {
         let token_id = self
             .primary_nft
             .get(&sender_id)
-            .expect("No NFT found for the owner");
+            .expect("No NFT found for the owner, use normal transfer instead");
 
         log!(
             "{} sent {} tokens with message: {}, for NFT {}",
@@ -33,19 +34,19 @@ impl FungibleTokenReceiver for Contract {
             token_id
         );
 
-        let donation_amount = self.donation_amounts.get(token_id).unwrap_or_else(|| {
+        let donation_amount = *self.donation_amounts.get(token_id).unwrap_or_else(|| {
             self.donor_count += 1;
             &0
         });
 
-        self.donation_amounts
-            .set(token_id.clone(), Some(donation_amount + amount.0));
+        let new_donation_amount = (U256::from(donation_amount) + U256::from(amount.0)).as_u128();
 
-        let donation_amount = self.donation_amounts.get(token_id).unwrap();
+        self.donation_amounts
+            .set(token_id.clone(), Some(new_donation_amount));
 
         let mut donor_ranking = self
             .donor_ranking
-            .get(&donation_amount)
+            .get(&new_donation_amount)
             .unwrap_or(&Vec::new())
             .clone();
 
@@ -54,7 +55,7 @@ impl FungibleTokenReceiver for Contract {
         self.donor_ranking
             .insert(donation_amount.clone(), donor_ranking);
 
-        self.total_dontation += amount.0;
+        self.total_dontation = (U256::from(self.total_dontation) + U256::from(amount.0)).as_u128();
 
         PromiseOrValue::Value(U128(0))
     }

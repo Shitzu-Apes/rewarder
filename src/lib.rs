@@ -12,6 +12,7 @@ use near_sdk::{
     store::{LookupMap, TreeMap},
     AccountId, BorshStorageKey, NearToken, Promise,
 };
+use primitive_types::U256;
 
 // Define the contract structure
 #[near(contract_state)]
@@ -97,14 +98,16 @@ impl Contract {
         if let Some(primary_nft) = primary_nft {
             self.internal_record_score(primary_nft, amount.0);
         }
-        self.total_distribute += amount.0;
+
+        self.total_distribute =
+            (U256::from(self.total_distribute) + U256::from(amount.0)).as_u128();
     }
 }
 
 impl Contract {
     fn internal_record_score(&mut self, primary_nft: TokenId, amount: u128) -> u128 {
         let score = self.scores.get(&primary_nft).unwrap_or(&0).clone();
-        let new_score = score + amount;
+        let new_score = (U256::from(score) + U256::from(amount)).as_u128();
         self.scores.set(primary_nft.clone(), Some(new_score));
 
         // remove from old ranking
