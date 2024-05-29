@@ -52,7 +52,7 @@ impl Contract {
         }
     }
 
-    fn record_score(&mut self, account_id: AccountId, amount: u128) -> u128 {
+    fn internal_record_score(&mut self, account_id: AccountId, amount: u128) -> u128 {
         if let Some(primary_nft) = self.primary_nft.get(&account_id) {
             let amount = amount * 2;
             let score = self.scores.get(primary_nft).unwrap_or(&0).clone();
@@ -87,7 +87,7 @@ impl Contract {
             "Not enough funds"
         );
 
-        let amount = self.record_score(account_id.clone(), amount);
+        let amount = self.internal_record_score(account_id.clone(), amount);
 
         // Interaction
         ext_ft_core::ext(self.reward_token.clone())
@@ -123,7 +123,7 @@ mod tests {
 
         testing_env!(context.clone());
         contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
-        contract.record_score(alice_id, amount);
+        contract.internal_record_score(alice_id, amount);
 
         assert_eq!(contract.scores.get("1".into()), Some(&(amount * 2)));
     }
@@ -150,19 +150,19 @@ mod tests {
 
         // Alice stakes NFT 1 and receives the lowest score
         contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
-        contract.record_score(alice_id.clone(), amount - fifty);
+        contract.internal_record_score(alice_id.clone(), amount - fifty);
 
         // Bob stakes NFT 2 and receives the highest score
         contract.nft_on_transfer(accounts(1), bob_id.clone(), "2".into(), "".into());
-        contract.record_score(bob_id.clone(), amount + fifty);
+        contract.internal_record_score(bob_id.clone(), amount + fifty);
 
         // Charlie stakes NFT 3 and receives the lowest score (same as Alice)
         contract.nft_on_transfer(accounts(1), charlie_id.clone(), "3".into(), "".into());
-        contract.record_score(charlie_id.clone(), amount - fifty);
+        contract.internal_record_score(charlie_id.clone(), amount - fifty);
 
         // Dan stakes NFT 4 and receives the middle score
         contract.nft_on_transfer(accounts(1), dan_id.clone(), "4".into(), "".into());
-        contract.record_score(dan_id.clone(), amount);
+        contract.internal_record_score(dan_id.clone(), amount);
 
         // Expect the ranking to be [((amount + fifty) * 2, [2]), (amount * 2, [4]), ((amount - fifty) * 2, [1, 3])]
         let ranking = contract.get_leaderboard(Some(3));
@@ -176,7 +176,7 @@ mod tests {
         );
 
         // Dan scores another fifty points and should move to the same score as Bob
-        contract.record_score(dan_id, fifty);
+        contract.internal_record_score(dan_id, fifty);
 
         // Expect the ranking to be [((amount + fifty) * 2, [2, 4]), ((amount - fifty) * 2, [1, 3])]
         let ranking = contract.get_leaderboard(None);
