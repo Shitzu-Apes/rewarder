@@ -1,4 +1,4 @@
-use near_contract_standards::non_fungible_token::TokenId;
+use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 
@@ -35,17 +35,20 @@ pub async fn mint_token(
     Ok(())
 }
 
-pub async fn mint_nft(sender: &Account, nft: &AccountId, quantity: u32) -> anyhow::Result<()> {
-    sender
+pub async fn mint_nft(
+    sender: &Account,
+    nft: &AccountId,
+    quantity: u32,
+) -> anyhow::Result<Vec<Token>> {
+    let res = sender
         .call(nft, "nft_mint")
         .args_json((quantity,))
-        .deposit(NearToken::from_near(5))
+        .deposit(NearToken::from_near(50))
         .max_gas()
         .transact()
-        .await?
-        .into_result()?;
+        .await?;
 
-    Ok(())
+    Ok(res.json::<Vec<Token>>()?)
 }
 
 pub async fn transfer_token(
@@ -98,6 +101,16 @@ pub async fn send_rewards(
     contract
         .call("send_rewards")
         .args_json((account_id, amount))
+        .transact()
+        .await?
+        .into_result()?;
+
+    Ok(())
+}
+
+pub async fn unstake(staker: &Account, rewarder: &AccountId) -> anyhow::Result<()> {
+    staker
+        .call(rewarder, "unstake")
         .transact()
         .await?
         .into_result()?;

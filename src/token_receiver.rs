@@ -74,6 +74,12 @@ impl NonFungibleTokenReceiver for Contract {
             "Only receive tokens from NFT contract"
         );
 
+        assert!(
+            self.internal_record_nft(previous_owner_id.clone(), token_id.clone())
+                .is_none(),
+            "User already has a primary NFT"
+        );
+
         log!(
             "{} transferred token {} from {} with message: {}",
             sender_id,
@@ -82,13 +88,7 @@ impl NonFungibleTokenReceiver for Contract {
             msg
         );
 
-        if let Some(old_primary_nft_id) =
-            self.internal_record_nft(previous_owner_id.clone(), token_id)
-        {
-            self.internal_nft_transfer(previous_owner_id, old_primary_nft_id);
-        } else {
-            self.participant_count += 1;
-        }
+        self.participant_count += 1;
 
         PromiseOrValue::Value(false)
     }

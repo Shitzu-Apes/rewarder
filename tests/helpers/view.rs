@@ -25,15 +25,15 @@ pub async fn primary_nft_of(
     Ok(res.json::<Option<TokenId>>()?)
 }
 
-pub async fn nft_first_token_of(
+pub async fn nft_tokens_for_owner(
     contract: &Contract,
     account_id: &AccountId,
-) -> anyhow::Result<Option<Token>> {
+) -> anyhow::Result<Vec<Token>> {
     let res: near_workspaces::result::ViewResultDetails = contract
         .call("nft_tokens_for_owner")
         .args_json((account_id, None::<U128>, None::<u64>))
         .view()
         .await?;
 
-    Ok(res.json::<Vec<Token>>()?.first().cloned())
+    Ok(res.json::<Vec<Token>>()?)
 }

@@ -1,8 +1,6 @@
 use anyhow::Ok;
 use helpers::{call, setup::setup, view};
-use near_contract_standards::non_fungible_token::Token;
 use near_sdk::NearToken;
-use serde_json::json;
 
 mod helpers;
 
@@ -58,10 +56,9 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
     call::mint_token(&token, alice.id(), amount).await?;
     call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
 
-    call::mint_nft(alice, nft.id(), 1).await?;
-    let alice_token = view::nft_first_token_of(&nft, &alice.id())
-        .await?
-        .expect("Fail to mint NFT");
+    let [alice_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
+        anyhow::bail!("Expected at least 1 token, got 0")
+    };
 
     call::stake(alice, rewarder.id(), &nft.id(), &alice_token.token_id).await?;
 
@@ -78,6 +75,64 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
     call::send_rewards(&rewarder, bob.id(), reward).await?;
     assert_eq!(view::ft_balance_of(&token, bob.id()).await?, reward);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_unstake() -> anyhow::Result<()> {
+    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+
+    let [alice, bob, ..] = &accounts[..] else {
+        anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
+    };
+
+    let amount = NearToken::from_near(1_000_000).as_yoctonear();
+    call::storage_deposit(&token, alice, None, None).await?;
+    call::storage_deposit(&token, bob, None, None).await?;
+    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+
+    call::mint_token(&token, alice.id(), amount).await?;
+    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+
+    let [alice_token1, alice_token2, ..] = &call::mint_nft(alice, nft.id(), 2).await?[..] else {
+        anyhow::bail!("Expected at least 2 token, got less")
+    };
+
+    let [bob_token1, ..] = &call::mint_nft(bob, nft.id(), 1).await?[..] else {
+        anyhow::bail!("Expected at least 1 token, got less")
+    };
+
+    call::stake(alice, rewarder.id(), &nft.id(), &alice_token1.token_id).await?;
+    call::stake(bob, rewarder.id(), &nft.id(), &bob_token1.token_id).await?;
+    assert_eq!(
+        view::nft_tokens_for_owner(&nft, rewarder.id())
+            .await?
+            .iter()
+            .map(|t| t.token_id.to_owned())
+            .collect::<Vec<_>>(),
+        vec![alice_token1.token_id.clone(), bob_token1.token_id.clone()]
+    );
+
+    // Staking again with another token should not work
+    call::stake(alice, rewarder.id(), &nft.id(), &alice_token2.token_id).await?;
+    assert_eq!(
+        view::nft_tokens_for_owner(&nft, alice.id()).await?,
+        vec![alice_token2.clone()]
+    );
+
+    // Need to unstake before staking again
+    call::unstake(alice, rewarder.id()).await?;
+    call::stake(alice, rewarder.id(), &nft.id(), &alice_token2.token_id).await?;
+
+    assert_eq!(
+        view::nft_tokens_for_owner(&nft, rewarder.id())
+            .await?
+            .iter()
+            .map(|t| t.token_id.to_owned())
+            .collect::<Vec<_>>(),
+        vec![bob_token1.token_id.clone(), alice_token2.token_id.clone(),]
+    );
 
     Ok(())
 }
