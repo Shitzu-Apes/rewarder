@@ -5,9 +5,10 @@ mod view;
 // Find all our documentation at https://docs.near.org
 use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
 use near_sdk::{
+    borsh::BorshSerialize,
     near,
     store::{LookupMap, TreeMap},
-    AccountId, NearToken,
+    AccountId, BorshStorageKey, NearToken,
 };
 
 // Define the contract structure
@@ -37,6 +38,16 @@ impl Default for Contract {
     }
 }
 
+#[derive(BorshStorageKey, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+pub enum StorageKey {
+    PrimaryNft,
+    Ranking,
+    Scores,
+    DonationAmounts,
+    DonorRanking,
+}
+
 #[near]
 impl Contract {
     #[init]
@@ -45,16 +56,16 @@ impl Contract {
             reward_token,
             nft,
 
-            primary_nft: LookupMap::new(b"p".to_vec()),
+            primary_nft: LookupMap::new(StorageKey::PrimaryNft),
 
             total_distribute: 0,
-            ranking: TreeMap::new(b"r".to_vec()),
-            scores: LookupMap::new(b"s".to_vec()),
+            ranking: TreeMap::new(StorageKey::Ranking),
+            scores: LookupMap::new(StorageKey::Scores),
             participant_count: 0,
 
             total_dontation: 0,
-            donation_amounts: LookupMap::new(b"d".to_vec()),
-            donor_ranking: TreeMap::new(b"dr".to_vec()),
+            donation_amounts: LookupMap::new(StorageKey::DonationAmounts),
+            donor_ranking: TreeMap::new(StorageKey::DonorRanking),
             donor_count: 0,
         }
     }
