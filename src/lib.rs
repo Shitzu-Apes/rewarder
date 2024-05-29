@@ -23,10 +23,18 @@ pub struct Contract {
     ranking: TreeMap<u128, Vec<TokenId>>,
     participant_count: u128,
 
-    total_received: u128,
+    total_dontation: u128,
     donation_amounts: LookupMap<TokenId, u128>,
     donor_ranking: TreeMap<u128, Vec<TokenId>>,
     donor_count: u128,
+}
+
+#[near]
+impl Default for Contract {
+    #[init]
+    fn default() -> Self {
+        panic!("No default initialization")
+    }
 }
 
 #[near]
@@ -44,7 +52,7 @@ impl Contract {
             scores: LookupMap::new(b"s".to_vec()),
             participant_count: 0,
 
-            total_received: 0,
+            total_dontation: 0,
             donation_amounts: LookupMap::new(b"d".to_vec()),
             donor_ranking: TreeMap::new(b"dr".to_vec()),
             donor_count: 0,
@@ -80,13 +88,9 @@ impl Contract {
 
     #[private]
     pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
-        // Check
-        assert!(
-            self.total_distribute + amount <= self.total_received,
-            "Not enough funds"
-        );
-
         let amount = self.internal_record_score(account_id.clone(), amount);
+
+        self.total_distribute += amount;
 
         // Interaction
         ext_ft_core::ext(self.reward_token.clone())

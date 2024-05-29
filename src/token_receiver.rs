@@ -20,37 +20,41 @@ impl FungibleTokenReceiver for Contract {
             "Only receive tokens from reward token"
         );
 
-        if let Some(token_id) = self.primary_nft.get(&sender_id) {
-            log!(
-                "{} sent {} tokens with message: {}, for NFT {}",
-                sender_id,
-                amount.0,
-                msg,
-                token_id
-            );
+        let token_id = self
+            .primary_nft
+            .get(&sender_id)
+            .expect("No NFT found for the owner");
 
-            let donation_amount = self.donation_amounts.get(token_id).unwrap_or_else(|| {
-                self.donor_count += 1;
-                &0
-            });
+        log!(
+            "{} sent {} tokens with message: {}, for NFT {}",
+            sender_id,
+            amount.0,
+            msg,
+            token_id
+        );
 
-            self.donation_amounts
-                .set(token_id.clone(), Some(donation_amount + amount.0));
+        let donation_amount = self.donation_amounts.get(token_id).unwrap_or_else(|| {
+            self.donor_count += 1;
+            &0
+        });
 
-            let donation_amount = self.donation_amounts.get(token_id).unwrap();
+        self.donation_amounts
+            .set(token_id.clone(), Some(donation_amount + amount.0));
 
-            let mut donor_ranking = self
-                .donor_ranking
-                .get(&donation_amount)
-                .unwrap_or(&Vec::new())
-                .clone();
+        let donation_amount = self.donation_amounts.get(token_id).unwrap();
 
-            donor_ranking.push(token_id.clone());
+        let mut donor_ranking = self
+            .donor_ranking
+            .get(&donation_amount)
+            .unwrap_or(&Vec::new())
+            .clone();
 
-            self.donor_ranking
-                .insert(donation_amount.clone(), donor_ranking);
-        }
-        self.total_received += amount.0;
+        donor_ranking.push(token_id.clone());
+
+        self.donor_ranking
+            .insert(donation_amount.clone(), donor_ranking);
+
+        self.total_dontation += amount.0;
 
         PromiseOrValue::Value(U128(0))
     }
@@ -97,7 +101,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ft_on_transfer_without_nft() {
+    #[should_panic]
+    fn test_cannot_transfer_call_without_nft() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
         let alice = accounts(1);
@@ -112,8 +117,6 @@ mod tests {
         let amount = 1000 * 10_u128.pow(18);
         testing_env!(context.clone());
         contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
-
-        assert_eq!(contract.total_received, amount);
     }
 
     #[test]
@@ -141,7 +144,7 @@ mod tests {
         testing_env!(context.clone());
         contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
 
-        assert_eq!(contract.total_received, amount);
+        assert_eq!(contract.total_dontation, amount);
 
         let score = contract.donation_amounts.get(&"1".to_string());
         assert_eq!(score, Some(&amount));

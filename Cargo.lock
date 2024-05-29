@@ -2978,6 +2978,7 @@ dependencies = [
 name = "rewarder"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "near-contract-standards",
  "near-sdk",
  "near-workspaces",

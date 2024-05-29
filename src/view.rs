@@ -1,6 +1,6 @@
 use crate::{Contract, ContractExt};
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::near;
+use near_sdk::{near, AccountId};
 
 #[near]
 impl Contract {

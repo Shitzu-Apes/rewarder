@@ -1,7 +1,7 @@
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::{env, ext_contract, AccountId, NearToken};
+use near_sdk::{env, ext_contract, near, AccountId, NearToken};
 
-use crate::Contract;
+use crate::{Contract, ContractExt};
 
 #[ext_contract(nft)]
 #[allow(dead_code)]
@@ -15,6 +15,7 @@ trait ShitzuNft {
     );
 }
 
+#[near]
 impl Contract {
     pub fn unstake(&mut self) {
         let owner = env::predecessor_account_id();

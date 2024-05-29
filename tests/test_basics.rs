@@ -1,26 +1,41 @@
-// use serde_json::json;
+use anyhow::Ok;
+use helpers::{call, setup::setup, view};
+use near_sdk::NearToken;
 
-// #[tokio::test]
-// async fn test_contract_is_operational() -> Result<(), Box<dyn std::error::Error>> {
-//     let sandbox = near_workspaces::sandbox().await?;
-//     let contract_wasm = near_workspaces::compile_project("./").await?;
+mod helpers;
 
-//     let contract = sandbox.dev_deploy(&contract_wasm).await?;
+#[tokio::test]
+async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
+    let (_worker, token, _nft, rewarder, accounts) = setup().await?;
 
-//     let user_account = sandbox.dev_create_account().await?;
+    let [alice, bob, ..] = &accounts[..] else {
+        anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
+    };
 
-//     let outcome = user_account
-//         .call(contract.id(), "set_greeting")
-//         .args_json(json!({"greeting": "Hello World!"}))
-//         .transact()
-//         .await?;
-//     assert!(outcome.is_success());
+    let amount = NearToken::from_near(1_000_000).as_yoctonear();
+    call::storage_deposit(&token, alice, None, None).await?;
+    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
-//     let user_message_outcome = contract
-//         .view("get_greeting")
-//         .args_json(json!({}))
-//         .await?;
-//     assert_eq!(user_message_outcome.json::<String>()?, "Hello World!");
+    call::mint_token(&token, alice.id(), amount).await?;
+    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
 
-//     Ok(())
-// }
+    assert_eq!(view::ft_balance_of(&token, rewarder.id()).await?, amount);
+
+    assert!(bob
+        .call(rewarder.id(), "send_rewards")
+        .args_json((alice.id(), amount))
+        .transact()
+        .await?
+        .into_result()
+        .is_err());
+
+    assert!(rewarder
+        .call("send_rewards")
+        .args_json((alice.id(), amount / 2))
+        .transact()
+        .await?
+        .into_result()
+        .is_ok());
+
+    Ok(())
+}
