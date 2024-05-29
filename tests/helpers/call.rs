@@ -101,6 +101,7 @@ pub async fn send_rewards(
     contract
         .call("send_rewards")
         .args_json((account_id, amount))
+        .max_gas()
         .transact()
         .await?
         .into_result()?;

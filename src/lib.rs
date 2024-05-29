@@ -6,10 +6,11 @@ mod view;
 use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
 use near_sdk::{
     borsh::BorshSerialize,
+    env,
     json_types::U128,
     near,
     store::{LookupMap, TreeMap},
-    AccountId, BorshStorageKey, NearToken,
+    AccountId, BorshStorageKey, NearToken, Promise,
 };
 
 // Define the contract structure
@@ -72,45 +73,56 @@ impl Contract {
     }
 
     #[private]
-    pub fn send_rewards(&mut self, account_id: AccountId, amount: U128) {
-        let amount = self.internal_record_score(account_id.clone(), amount.0);
+    pub fn send_rewards(&mut self, account_id: AccountId, amount: U128) -> Promise {
+        let (some_primary_nft_token_id, amount) =
+            if let Some(primary_nft) = self.primary_nft.get(&account_id) {
+                (Some(primary_nft.clone()), U128(amount.0 * 2))
+            } else {
+                (None, amount)
+            };
 
-        self.total_distribute += amount;
-
-        // Interaction
         ext_ft_core::ext(self.reward_token.clone())
             .with_unused_gas_weight(1)
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .ft_transfer(account_id.clone(), amount.into(), None);
+            .ft_transfer(account_id.clone(), amount.into(), None)
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_unused_gas_weight(1)
+                    .on_reward_sent(some_primary_nft_token_id, amount),
+            )
+    }
+
+    #[private]
+    pub fn on_reward_sent(&mut self, primary_nft: Option<TokenId>, amount: U128) {
+        if let Some(primary_nft) = primary_nft {
+            self.internal_record_score(primary_nft, amount.0);
+        }
+        self.total_distribute += amount.0;
     }
 }
 
 impl Contract {
-    fn internal_record_score(&mut self, account_id: AccountId, amount: u128) -> u128 {
-        if let Some(primary_nft) = self.primary_nft.get(&account_id) {
-            let amount = amount * 2;
-            let score = self.scores.get(primary_nft).unwrap_or(&0).clone();
-            let new_score = score + amount;
-            self.scores.set(primary_nft.clone(), Some(new_score));
+    fn internal_record_score(&mut self, primary_nft: TokenId, amount: u128) -> u128 {
+        let amount = amount * 2;
+        let score = self.scores.get(&primary_nft).unwrap_or(&0).clone();
+        let new_score = score + amount;
+        self.scores.set(primary_nft.clone(), Some(new_score));
 
-            // remove from old ranking
-            let mut ranking = self.ranking.get(&score).unwrap_or(&Vec::new()).clone();
-            ranking.retain(|x| x != primary_nft);
+        // remove from old ranking
+        let mut ranking = self.ranking.get(&score).unwrap_or(&Vec::new()).clone();
+        ranking.retain(|x| x != &primary_nft);
 
-            if ranking.is_empty() {
-                self.ranking.remove(&score);
-            } else {
-                self.ranking.insert(score, ranking);
-            }
-
-            let mut ranking = self.ranking.get(&new_score).unwrap_or(&Vec::new()).clone();
-            ranking.push(primary_nft.clone());
-            self.ranking.insert(new_score, ranking);
-
-            amount
+        if ranking.is_empty() {
+            self.ranking.remove(&score);
         } else {
-            amount
+            self.ranking.insert(score, ranking);
         }
+
+        let mut ranking = self.ranking.get(&new_score).unwrap_or(&Vec::new()).clone();
+        ranking.push(primary_nft.clone());
+        self.ranking.insert(new_score, ranking);
+
+        amount
     }
 }
 
@@ -141,7 +153,7 @@ mod tests {
 
         testing_env!(context.clone());
         contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
-        contract.internal_record_score(alice_id, amount);
+        contract.internal_record_score("1".into(), amount);
 
         assert_eq!(contract.scores.get("1".into()), Some(&(amount * 2)));
     }
@@ -168,19 +180,19 @@ mod tests {
 
         // Alice stakes NFT 1 and receives the lowest score
         contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
-        contract.internal_record_score(alice_id.clone(), amount - fifty);
+        contract.internal_record_score("1".into(), amount - fifty);
 
         // Bob stakes NFT 2 and receives the highest score
         contract.nft_on_transfer(accounts(1), bob_id.clone(), "2".into(), "".into());
-        contract.internal_record_score(bob_id.clone(), amount + fifty);
+        contract.internal_record_score("2".into(), amount + fifty);
 
         // Charlie stakes NFT 3 and receives the lowest score (same as Alice)
         contract.nft_on_transfer(accounts(1), charlie_id.clone(), "3".into(), "".into());
-        contract.internal_record_score(charlie_id.clone(), amount - fifty);
+        contract.internal_record_score("3".into(), amount - fifty);
 
         // Dan stakes NFT 4 and receives the middle score
         contract.nft_on_transfer(accounts(1), dan_id.clone(), "4".into(), "".into());
-        contract.internal_record_score(dan_id.clone(), amount);
+        contract.internal_record_score("4".into(), amount);
 
         // Expect the ranking to be [((amount + fifty) * 2, [2]), (amount * 2, [4]), ((amount - fifty) * 2, [1, 3])]
         let ranking = contract.get_leaderboard(Some(3));
@@ -197,7 +209,7 @@ mod tests {
         );
 
         // Dan scores another fifty points and should move to the same score as Bob
-        contract.internal_record_score(dan_id, fifty);
+        contract.internal_record_score("4".into(), fifty);
 
         // Expect the ranking to be [((amount + fifty) * 2, [2, 4]), ((amount - fifty) * 2, [1, 3])]
         let ranking = contract.get_leaderboard(None);

@@ -24,6 +24,7 @@ async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
     assert!(bob
         .call(rewarder.id(), "send_rewards")
         .args_json((alice.id(), amount))
+        .max_gas()
         .transact()
         .await?
         .into_result()
@@ -32,6 +33,7 @@ async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
     assert!(rewarder
         .call("send_rewards")
         .args_json((alice.id(), amount))
+        .max_gas()
         .transact()
         .await?
         .into_result()
