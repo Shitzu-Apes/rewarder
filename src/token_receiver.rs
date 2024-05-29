@@ -77,10 +77,10 @@ impl NonFungibleTokenReceiver for Contract {
             msg
         );
 
-        if let Some(old_primary_nft) = self.primary_nft.insert(previous_owner_id.clone(), token_id)
+        if let Some(old_primary_nft_id) =
+            self.internal_record_nft(previous_owner_id.clone(), token_id)
         {
-            // Set this old primary NFT to be claimable by the previous owner
-            self.unstaked_nft.insert(old_primary_nft, previous_owner_id);
+            self.internal_nft_transfer(previous_owner_id, old_primary_nft_id);
         } else {
             self.participant_count += 1;
         }
@@ -131,7 +131,6 @@ mod tests {
 
         testing_env!(context.clone());
         contract.nft_on_transfer(accounts(0), alice.clone(), "1".to_string(), "".to_string());
-        // Alice successfully stake NFT 1
 
         let context = VMContextBuilder::new()
             .predecessor_account_id(reward_token.clone())
@@ -210,9 +209,5 @@ mod tests {
         contract.nft_on_transfer(accounts(0), alice.clone(), "2".to_string(), "".to_string());
 
         assert_eq!(contract.primary_nft.get(&alice), Some(&"2".to_string()));
-        assert_eq!(
-            contract.unstaked_nft.get(&"1".to_string()),
-            Some(&alice.clone())
-        );
     }
 }

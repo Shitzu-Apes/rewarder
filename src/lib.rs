@@ -1,3 +1,4 @@
+mod nft;
 mod token_receiver;
 mod view;
 
@@ -16,7 +17,6 @@ pub struct Contract {
     nft: AccountId,
 
     primary_nft: LookupMap<AccountId, TokenId>,
-    unstaked_nft: LookupMap<TokenId, AccountId>,
 
     total_distribute: u128,
     scores: LookupMap<TokenId, u128>,
@@ -36,7 +36,6 @@ impl Contract {
         Self {
             reward_token,
             nft,
-            unstaked_nft: LookupMap::new(b"u".to_vec()),
 
             primary_nft: LookupMap::new(b"p".to_vec()),
 
