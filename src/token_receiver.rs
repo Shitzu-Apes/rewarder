@@ -196,6 +196,7 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     fn test_nft_on_transfer_switch_primary_nft() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
@@ -210,8 +211,8 @@ mod tests {
         // Test when sender is not the NFT contract
         testing_env!(context.clone());
         contract.nft_on_transfer(accounts(0), alice.clone(), "1".to_string(), "".to_string());
-        contract.nft_on_transfer(accounts(0), alice.clone(), "2".to_string(), "".to_string());
 
-        assert_eq!(contract.primary_nft.get(&alice), Some(&"2".to_string()));
+        // Need to unstake before staking again
+        contract.nft_on_transfer(accounts(0), alice.clone(), "2".to_string(), "".to_string());
     }
 }
