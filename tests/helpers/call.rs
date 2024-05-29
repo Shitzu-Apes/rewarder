@@ -69,6 +69,24 @@ pub async fn transfer_token(
     Ok(())
 }
 
+pub async fn transfer_nft(
+    sender: &Account,
+    receiver: &AccountId,
+    nft: &AccountId,
+    token_id: &TokenId,
+) -> anyhow::Result<()> {
+    sender
+        .call(nft, "nft_transfer")
+        .args_json((receiver, token_id, None::<u64>, None::<String>))
+        .deposit(NearToken::from_yoctonear(1))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+
+    Ok(())
+}
+
 pub async fn stake(
     staker: &Account,
     receiver: &AccountId,

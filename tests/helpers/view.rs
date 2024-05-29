@@ -37,3 +37,13 @@ pub async fn nft_tokens_for_owner(
 
     Ok(res.json::<Vec<Token>>()?)
 }
+
+pub async fn score_of(contract: &Contract, token_id: TokenId) -> anyhow::Result<U128> {
+    let res = contract
+        .call("score_of")
+        .args_json((token_id,))
+        .view()
+        .await?;
+
+    Ok(res.json::<U128>()?)
+}

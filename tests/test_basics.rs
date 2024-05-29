@@ -141,3 +141,53 @@ async fn test_unstake() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_nft_score_persist() -> anyhow::Result<()> {
+    // This test is to make sure that the score of the NFT is persisted after unstaking
+    // or even the owner of the NFT is changed and come back to stake again
+    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+
+    let [alice, bob, ..] = &accounts[..] else {
+        anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
+    };
+
+    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+
+    call::storage_deposit(&token, alice, None, None).await?;
+    call::storage_deposit(&token, bob, None, None).await?;
+    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+
+    call::mint_token(&token, alice.id(), amount).await?;
+    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+
+    let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
+        anyhow::bail!("Expected at least 1 token, got 0")
+    };
+
+    let reward = U128(NearToken::from_near(100).as_yoctonear());
+
+    call::stake(alice, rewarder.id(), &nft.id(), &nft_token.token_id).await?;
+
+    call::send_rewards(&rewarder, alice.id(), reward).await?;
+
+    call::unstake(alice, rewarder.id()).await?;
+
+    assert_eq!(
+        view::score_of(&rewarder, nft_token.token_id.clone()).await?,
+        U128(reward.0 * 2)
+    );
+
+    call::transfer_nft(&alice, bob.id(), &nft.id(), &nft_token.token_id).await?;
+
+    call::stake(&bob, rewarder.id(), nft.id(), &nft_token.token_id).await?;
+
+    call::send_rewards(&rewarder, bob.id(), reward).await?;
+
+    assert_eq!(
+        view::score_of(&rewarder, nft_token.token_id.clone()).await?,
+        U128(reward.0 * 4)
+    );
+
+    Ok(())
+}

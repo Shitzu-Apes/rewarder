@@ -17,4 +17,8 @@ impl Contract {
     pub fn primary_nft_of(&self, account_id: AccountId) -> Option<TokenId> {
         self.primary_nft.get(&account_id).cloned()
     }
+
+    pub fn score_of(&self, token_id: TokenId) -> U128 {
+        U128(self.scores.get(&token_id).unwrap_or(&0).clone())
+    }
 }
