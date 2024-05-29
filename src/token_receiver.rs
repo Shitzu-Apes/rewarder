@@ -75,8 +75,7 @@ impl NonFungibleTokenReceiver for Contract {
         );
 
         assert!(
-            self.internal_record_nft(previous_owner_id.clone(), token_id.clone())
-                .is_none(),
+            self.primary_nft.get(&previous_owner_id).is_none(),
             "User already has a primary NFT"
         );
 
@@ -88,7 +87,7 @@ impl NonFungibleTokenReceiver for Contract {
             msg
         );
 
-        self.participant_count += 1;
+        self.on_stake_changed(previous_owner_id.clone(), Some(token_id.clone()));
 
         PromiseOrValue::Value(false)
     }

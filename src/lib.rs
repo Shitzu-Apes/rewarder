@@ -155,7 +155,7 @@ mod tests {
         contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
         contract.internal_record_score("1".into(), amount);
 
-        assert_eq!(contract.scores.get("1".into()), Some(&(amount * 2)));
+        assert_eq!(contract.scores.get("1"), Some(&(amount * 2)));
     }
 
     #[test]

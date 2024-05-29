@@ -1,5 +1,5 @@
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::{env, ext_contract, near, AccountId, NearToken};
+use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
 
 use crate::{Contract, ContractExt};
 
@@ -17,38 +17,38 @@ trait ShitzuNft {
 
 #[near]
 impl Contract {
-    pub fn unstake(&mut self) {
+    pub fn unstake(&mut self) -> Promise {
         let owner = env::predecessor_account_id();
 
         let token_id = self
             .primary_nft
-            .remove(&owner)
+            .get(&owner)
             .expect("No NFT found for the owner");
 
-        self.participant_count -= 1;
-
-        self.internal_nft_transfer(owner.clone(), token_id.clone());
-    }
-}
-
-impl Contract {
-    pub(crate) fn internal_record_nft(
-        &mut self,
-        account_id: AccountId,
-        token_id: TokenId,
-    ) -> Option<TokenId> {
-        self.primary_nft.insert(account_id.clone(), token_id)
-    }
-
-    pub(crate) fn internal_nft_transfer(&mut self, receiver_id: AccountId, token_id: TokenId) {
         nft::ext(self.nft.clone())
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .nft_transfer(
-                receiver_id,
-                token_id,
+                owner.clone(),
+                token_id.clone(),
                 None,
                 Some("Return old primary NFT".to_string()),
-            );
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_unused_gas_weight(1)
+                    .on_stake_changed(owner, None),
+            )
+    }
+
+    #[private]
+    pub fn on_stake_changed(&mut self, account_id: AccountId, token_id: Option<TokenId>) {
+        self.primary_nft.set(account_id.clone(), token_id.clone());
+
+        if let Some(_) = token_id {
+            self.participant_count += 1;
+        } else {
+            self.participant_count -= 1;
+        }
     }
 }
 
@@ -85,6 +85,7 @@ mod tests {
             .build();
         testing_env!(context);
         contract.unstake();
+        contract.on_stake_changed(alice.clone(), None);
 
         assert_eq!(contract.primary_nft.get(&alice), None);
         assert_eq!(contract.participant_count, 0);

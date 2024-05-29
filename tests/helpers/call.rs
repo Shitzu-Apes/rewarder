@@ -112,6 +112,7 @@ pub async fn send_rewards(
 pub async fn unstake(staker: &Account, rewarder: &AccountId) -> anyhow::Result<()> {
     staker
         .call(rewarder, "unstake")
+        .max_gas()
         .transact()
         .await?
         .into_result()?;
