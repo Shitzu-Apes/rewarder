@@ -21,21 +21,19 @@ impl FungibleTokenReceiver for Contract {
             "Only receive tokens from reward token"
         );
 
-        let token_id = self
-            .account_to_token_id
-            .get(&sender_id)
-            .expect("No NFT found for the owner, use normal transfer instead");
+        if let Some(token_id) = self.account_to_token_id.get(&sender_id) {
+            log!(
+                "{} sent {} tokens with message: {}, for NFT {}",
+                sender_id,
+                amount.0,
+                msg,
+                token_id
+            );
 
-        log!(
-            "{} sent {} tokens with message: {}, for NFT {}",
-            sender_id,
-            amount.0,
-            msg,
-            token_id
-        );
-
-        self.internal_record_score(token_id.clone(), amount.0 * 4);
-        self.total_donation = (U256::from(self.total_donation) + U256::from(amount.0)).as_u128();
+            self.internal_record_score(token_id.clone(), amount.0 * 4);
+            self.total_donation =
+                (U256::from(self.total_donation) + U256::from(amount.0)).as_u128();
+        }
 
         PromiseOrValue::Value(U128(0))
     }
@@ -80,25 +78,6 @@ mod tests {
     use near_sdk::{testing_env, NearToken};
 
     use super::*;
-
-    #[test]
-    #[should_panic]
-    fn test_cannot_transfer_call_without_nft() {
-        let reward_token: AccountId = "reward_token".parse().unwrap();
-        let nft: AccountId = "nft".parse().unwrap();
-        let alice = accounts(1);
-
-        // Alice stakes NFT 1
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
-        let context = VMContextBuilder::new()
-            .predecessor_account_id(reward_token.clone())
-            .attached_deposit(NearToken::from_yoctonear(1))
-            .build();
-
-        let amount = 1000 * 10_u128.pow(18);
-        testing_env!(context.clone());
-        contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
-    }
 
     #[test]
     fn test_ft_on_transfer_with_nft_quadruple_score() {
