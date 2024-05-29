@@ -2,14 +2,14 @@ use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{json_types::U128, AccountId};
 use near_workspaces::Contract;
 
-pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyhow::Result<u128> {
+pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyhow::Result<U128> {
     let res = contract
         .call("ft_balance_of")
         .args_json((account_id,))
         .view()
         .await?;
 
-    Ok(res.json::<U128>()?.0)
+    Ok(res.json::<U128>()?)
 }
 
 pub async fn primary_nft_of(

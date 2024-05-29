@@ -23,11 +23,11 @@ pub async fn storage_deposit(
 pub async fn mint_token(
     contract: &Contract,
     receiver: &AccountId,
-    amount: u128,
+    amount: U128,
 ) -> anyhow::Result<()> {
     contract
         .call("mint")
-        .args_json((receiver, U128::from(amount)))
+        .args_json((receiver, amount))
         .transact()
         .await?
         .into_result()?;
@@ -55,11 +55,11 @@ pub async fn transfer_token(
     token: &AccountId,
     sender: &Account,
     receiver: &AccountId,
-    amount: u128,
+    amount: U128,
 ) -> anyhow::Result<()> {
     sender
         .call(token, "ft_transfer")
-        .args_json((receiver, U128::from(amount), "".to_string()))
+        .args_json((receiver, amount, "".to_string()))
         .deposit(NearToken::from_yoctonear(1))
         .max_gas()
         .transact()
@@ -96,7 +96,7 @@ pub async fn stake(
 pub async fn send_rewards(
     contract: &Contract,
     account_id: &AccountId,
-    amount: u128,
+    amount: U128,
 ) -> anyhow::Result<()> {
     contract
         .call("send_rewards")

@@ -6,6 +6,7 @@ mod view;
 use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
 use near_sdk::{
     borsh::BorshSerialize,
+    json_types::U128,
     near,
     store::{LookupMap, TreeMap},
     AccountId, BorshStorageKey, NearToken,
@@ -71,8 +72,8 @@ impl Contract {
     }
 
     #[private]
-    pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
-        let amount = self.internal_record_score(account_id.clone(), amount);
+    pub fn send_rewards(&mut self, account_id: AccountId, amount: U128) {
+        let amount = self.internal_record_score(account_id.clone(), amount.0);
 
         self.total_distribute += amount;
 
@@ -117,6 +118,7 @@ impl Contract {
 mod tests {
     use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
     use near_sdk::{
+        json_types::U128,
         test_utils::{accounts, VMContextBuilder},
         testing_env,
     };
@@ -185,9 +187,12 @@ mod tests {
         assert_eq!(
             ranking,
             vec![
-                ((amount + fifty) * 2, vec!["2".to_string()]),
-                (amount * 2, vec!["4".to_string()]),
-                ((amount - fifty) * 2, vec!["1".to_string(), "3".to_string()])
+                (U128((amount + fifty) * 2), vec!["2".to_string()]),
+                (U128(amount * 2), vec!["4".to_string()]),
+                (
+                    U128((amount - fifty) * 2),
+                    vec!["1".to_string(), "3".to_string()]
+                )
             ]
         );
 
@@ -199,8 +204,14 @@ mod tests {
         assert_eq!(
             ranking,
             vec![
-                ((amount + fifty) * 2, vec!["2".to_string(), "4".to_string()]),
-                ((amount - fifty) * 2, vec!["1".to_string(), "3".to_string()])
+                (
+                    U128((amount + fifty) * 2),
+                    vec!["2".to_string(), "4".to_string()]
+                ),
+                (
+                    U128((amount - fifty) * 2),
+                    vec!["1".to_string(), "3".to_string()]
+                )
             ]
         );
     }
