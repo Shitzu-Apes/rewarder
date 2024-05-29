@@ -29,7 +29,9 @@ impl Contract {
 
         self.internal_nft_transfer(owner.clone(), token_id.clone());
     }
+}
 
+impl Contract {
     pub(crate) fn internal_record_nft(
         &mut self,
         account_id: AccountId,

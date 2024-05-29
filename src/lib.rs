@@ -59,6 +59,21 @@ impl Contract {
         }
     }
 
+    #[private]
+    pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
+        let amount = self.internal_record_score(account_id.clone(), amount);
+
+        self.total_distribute += amount;
+
+        // Interaction
+        ext_ft_core::ext(self.reward_token.clone())
+            .with_unused_gas_weight(1)
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .ft_transfer(account_id.clone(), amount.into(), None);
+    }
+}
+
+impl Contract {
     fn internal_record_score(&mut self, account_id: AccountId, amount: u128) -> u128 {
         if let Some(primary_nft) = self.primary_nft.get(&account_id) {
             let amount = amount * 2;
@@ -84,19 +99,6 @@ impl Contract {
         } else {
             amount
         }
-    }
-
-    #[private]
-    pub fn send_rewards(&mut self, account_id: AccountId, amount: u128) {
-        let amount = self.internal_record_score(account_id.clone(), amount);
-
-        self.total_distribute += amount;
-
-        // Interaction
-        ext_ft_core::ext(self.reward_token.clone())
-            .with_unused_gas_weight(1)
-            .with_attached_deposit(NearToken::from_yoctonear(1))
-            .ft_transfer(account_id.clone(), amount.into(), None);
     }
 }
 
