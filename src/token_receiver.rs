@@ -2,14 +2,14 @@ use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
     non_fungible_token::{core::NonFungibleTokenReceiver, TokenId},
 };
-use near_sdk::{env, json_types::U128, log, near, AccountId, PromiseOrValue};
+use near_sdk::{env, json_types::U128, near, AccountId, PromiseOrValue};
 use primitive_types::U256;
 
 use crate::{Contract, ContractExt};
 
 #[near]
 impl FungibleTokenReceiver for Contract {
-    #[payable]
+    #[allow(unused_variables)]
     fn ft_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -22,14 +22,6 @@ impl FungibleTokenReceiver for Contract {
         );
 
         if let Some(token_id) = self.account_to_token_id.get(&sender_id) {
-            log!(
-                "{} sent {} tokens with message: {}, for NFT {}",
-                sender_id,
-                amount.0,
-                msg,
-                token_id
-            );
-
             self.internal_record_score(token_id.clone(), amount.0 * 4);
             self.total_donation =
                 (U256::from(self.total_donation) + U256::from(amount.0)).as_u128();
@@ -41,6 +33,7 @@ impl FungibleTokenReceiver for Contract {
 
 #[near]
 impl NonFungibleTokenReceiver for Contract {
+    #[allow(unused_variables)]
     fn nft_on_transfer(
         &mut self,
         sender_id: AccountId,
@@ -55,15 +48,7 @@ impl NonFungibleTokenReceiver for Contract {
 
         assert!(
             self.account_to_token_id.get(&previous_owner_id).is_none(),
-            "User already has a primary NFT"
-        );
-
-        log!(
-            "{} transferred token {} from {} with message: {}",
-            sender_id,
-            token_id,
-            previous_owner_id,
-            msg
+            "User already has already staked"
         );
 
         self.on_stake_changed(previous_owner_id.clone(), Some(token_id.clone()));
