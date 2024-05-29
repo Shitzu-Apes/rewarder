@@ -21,7 +21,7 @@ impl Contract {
         let owner = env::predecessor_account_id();
 
         let token_id = self
-            .primary_nft
+            .account_to_token_id
             .get(&owner)
             .expect("No NFT found for the owner");
 
@@ -42,12 +42,13 @@ impl Contract {
 
     #[private]
     pub fn on_stake_changed(&mut self, account_id: AccountId, token_id: Option<TokenId>) {
-        self.primary_nft.set(account_id.clone(), token_id.clone());
+        self.account_to_token_id
+            .set(account_id.clone(), token_id.clone());
 
         if let Some(_) = token_id {
-            self.participant_count += 1;
+            self.total_nft_staked += 1;
         } else {
-            self.participant_count -= 1;
+            self.total_nft_staked -= 1;
         }
     }
 }
@@ -76,8 +77,11 @@ mod tests {
 
         // Alice stakes NFT 1
         contract.nft_on_transfer(accounts(2), alice.clone(), "1".to_string(), "".to_string());
-        assert_eq!(contract.primary_nft.get(&alice), Some(&"1".to_string()));
-        assert_eq!(contract.participant_count, 1);
+        assert_eq!(
+            contract.account_to_token_id.get(&alice),
+            Some(&"1".to_string())
+        );
+        assert_eq!(contract.total_nft_staked, 1);
 
         // Alice unstakes NFT 1
         let context = VMContextBuilder::new()
@@ -87,7 +91,7 @@ mod tests {
         contract.unstake();
         contract.on_stake_changed(alice.clone(), None);
 
-        assert_eq!(contract.primary_nft.get(&alice), None);
-        assert_eq!(contract.participant_count, 0);
+        assert_eq!(contract.account_to_token_id.get(&alice), None);
+        assert_eq!(contract.total_nft_staked, 0);
     }
 }

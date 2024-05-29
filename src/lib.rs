@@ -20,17 +20,13 @@ pub struct Contract {
     reward_token: AccountId,
     nft: AccountId,
 
-    primary_nft: LookupMap<AccountId, TokenId>,
+    account_to_token_id: LookupMap<AccountId, TokenId>,
+    total_nft_staked: u128,
 
     total_distribute: u128,
+    total_donation: u128,
     scores: LookupMap<TokenId, u128>,
     ranking: TreeMap<u128, Vec<TokenId>>,
-    participant_count: u128,
-
-    total_dontation: u128,
-    donation_amounts: LookupMap<TokenId, u128>,
-    donor_ranking: TreeMap<u128, Vec<TokenId>>,
-    donor_count: u128,
 }
 
 #[near]
@@ -59,24 +55,20 @@ impl Contract {
             reward_token,
             nft,
 
-            primary_nft: LookupMap::new(StorageKey::PrimaryNft),
+            account_to_token_id: LookupMap::new(StorageKey::PrimaryNft),
+            total_nft_staked: 0,
 
             total_distribute: 0,
+            total_donation: 0,
             ranking: TreeMap::new(StorageKey::Ranking),
             scores: LookupMap::new(StorageKey::Scores),
-            participant_count: 0,
-
-            total_dontation: 0,
-            donation_amounts: LookupMap::new(StorageKey::DonationAmounts),
-            donor_ranking: TreeMap::new(StorageKey::DonorRanking),
-            donor_count: 0,
         }
     }
 
     #[private]
     pub fn send_rewards(&mut self, account_id: AccountId, amount: U128) -> Promise {
         let (some_primary_nft_token_id, amount) =
-            if let Some(primary_nft) = self.primary_nft.get(&account_id) {
+            if let Some(primary_nft) = self.account_to_token_id.get(&account_id) {
                 (Some(primary_nft.clone()), U128(amount.0 * 2))
             } else {
                 (None, amount)

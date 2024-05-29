@@ -22,7 +22,7 @@ impl FungibleTokenReceiver for Contract {
         );
 
         let token_id = self
-            .primary_nft
+            .account_to_token_id
             .get(&sender_id)
             .expect("No NFT found for the owner, use normal transfer instead");
 
@@ -34,28 +34,8 @@ impl FungibleTokenReceiver for Contract {
             token_id
         );
 
-        let donation_amount = *self.donation_amounts.get(token_id).unwrap_or_else(|| {
-            self.donor_count += 1;
-            &0
-        });
-
-        let new_donation_amount = (U256::from(donation_amount) + U256::from(amount.0)).as_u128();
-
-        self.donation_amounts
-            .set(token_id.clone(), Some(new_donation_amount));
-
-        let mut donor_ranking = self
-            .donor_ranking
-            .get(&new_donation_amount)
-            .unwrap_or(&Vec::new())
-            .clone();
-
-        donor_ranking.push(token_id.clone());
-
-        self.donor_ranking
-            .insert(donation_amount.clone(), donor_ranking);
-
-        self.total_dontation = (U256::from(self.total_dontation) + U256::from(amount.0)).as_u128();
+        self.internal_record_score(token_id.clone(), amount.0 * 4);
+        self.total_donation = (U256::from(self.total_donation) + U256::from(amount.0)).as_u128();
 
         PromiseOrValue::Value(U128(0))
     }
@@ -76,7 +56,7 @@ impl NonFungibleTokenReceiver for Contract {
         );
 
         assert!(
-            self.primary_nft.get(&previous_owner_id).is_none(),
+            self.account_to_token_id.get(&previous_owner_id).is_none(),
             "User already has a primary NFT"
         );
 
@@ -121,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ft_on_transfer_with_nft() {
+    fn test_ft_on_transfer_with_nft_quadruple_score() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
         let alice = accounts(1);
@@ -145,12 +125,10 @@ mod tests {
         testing_env!(context.clone());
         contract.ft_on_transfer(alice.clone(), U128(amount), "".to_string());
 
-        assert_eq!(contract.total_dontation, amount);
+        assert_eq!(contract.total_donation, amount);
 
-        let score = contract.donation_amounts.get(&"1".to_string());
-        assert_eq!(score, Some(&amount));
-
-        assert_eq!(contract.donor_count, 1);
+        let score = contract.score_of("1".to_string());
+        assert_eq!(score.0, &amount * 4);
     }
 
     #[test]
@@ -191,8 +169,11 @@ mod tests {
         testing_env!(context.clone());
         contract.nft_on_transfer(accounts(0), alice.clone(), "1".to_string(), "".to_string());
 
-        assert_eq!(contract.primary_nft.get(&alice), Some(&"1".to_string()));
-        assert_eq!(contract.participant_count, 1);
+        assert_eq!(
+            contract.account_to_token_id.get(&alice),
+            Some(&"1".to_string())
+        );
+        assert_eq!(contract.total_nft_staked, 1);
     }
 
     #[test]
