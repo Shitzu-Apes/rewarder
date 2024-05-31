@@ -21,6 +21,7 @@ pub struct Contract {
     nft: AccountId,
 
     account_to_token_id: LookupMap<AccountId, TokenId>,
+    token_id_to_account: LookupMap<TokenId, AccountId>,
     total_nft_staked: u128,
 
     total_distribute: u128,
@@ -40,7 +41,8 @@ impl Default for Contract {
 #[derive(BorshStorageKey, BorshSerialize)]
 #[borsh(crate = "near_sdk::borsh")]
 pub enum StorageKey {
-    PrimaryNft,
+    PrimaryNFT,
+    OwnerNFT,
     Ranking,
     Scores,
     DonationAmounts,
@@ -55,7 +57,8 @@ impl Contract {
             reward_token,
             nft,
 
-            account_to_token_id: LookupMap::new(StorageKey::PrimaryNft),
+            account_to_token_id: LookupMap::new(StorageKey::PrimaryNFT),
+            token_id_to_account: LookupMap::new(StorageKey::OwnerNFT),
             total_nft_staked: 0,
 
             total_distribute: 0,
@@ -193,11 +196,17 @@ mod tests {
         assert_eq!(
             ranking,
             vec![
-                (U128((amount + fifty) * 2), vec!["2".to_string()]),
-                (U128(amount * 2), vec!["4".to_string()]),
+                (
+                    U128((amount + fifty) * 2),
+                    vec![("2".to_string(), bob_id.clone())]
+                ),
+                (U128(amount * 2), vec![("4".to_string(), dan_id.clone())]),
                 (
                     U128((amount - fifty) * 2),
-                    vec!["1".to_string(), "3".to_string()]
+                    vec![
+                        ("1".to_string(), alice_id.clone()),
+                        ("3".to_string(), charlie_id.clone())
+                    ]
                 )
             ]
         );
@@ -212,11 +221,17 @@ mod tests {
             vec![
                 (
                     U128((amount + fifty) * 2),
-                    vec!["2".to_string(), "4".to_string()]
+                    vec![
+                        ("2".to_string(), bob_id.clone()),
+                        ("4".to_string(), dan_id.clone())
+                    ]
                 ),
                 (
                     U128((amount - fifty) * 2),
-                    vec!["1".to_string(), "3".to_string()]
+                    vec![
+                        ("1".to_string(), alice_id.clone()),
+                        ("3".to_string(), charlie_id.clone())
+                    ]
                 )
             ]
         );

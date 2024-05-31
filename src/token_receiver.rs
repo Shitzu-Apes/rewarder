@@ -51,7 +51,11 @@ impl NonFungibleTokenReceiver for Contract {
             "User already has already staked"
         );
 
-        self.on_stake_changed(previous_owner_id.clone(), Some(token_id.clone()));
+        self.on_stake_changed(
+            previous_owner_id.clone(),
+            token_id.clone(),
+            crate::nft::Action::Stake,
+        );
 
         PromiseOrValue::Value(false)
     }
