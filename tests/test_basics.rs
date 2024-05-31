@@ -6,7 +6,8 @@ mod helpers;
 
 #[tokio::test]
 async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
-    let (_worker, token, _nft, rewarder, accounts) = setup().await?;
+    let worker = near_workspaces::sandbox().await?;
+    let (token, _nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
@@ -44,7 +45,8 @@ async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
-    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+    let worker = near_workspaces::sandbox().await?;
+    let (token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -86,7 +88,8 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_unstake() -> anyhow::Result<()> {
-    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+    let worker = near_workspaces::sandbox().await?;
+    let (token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -146,7 +149,8 @@ async fn test_unstake() -> anyhow::Result<()> {
 async fn test_nft_score_persist() -> anyhow::Result<()> {
     // This test is to make sure that the score of the NFT is persisted after unstaking
     // or even the owner of the NFT is changed and come back to stake again
-    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+    let worker = near_workspaces::sandbox().await?;
+    let (token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -194,7 +198,8 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
 #[tokio::test]
 async fn test_donation_quadruple_score() -> anyhow::Result<()> {
-    let (_worker, token, nft, rewarder, accounts) = setup().await?;
+    let worker = near_workspaces::sandbox().await?;
+    let (token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())

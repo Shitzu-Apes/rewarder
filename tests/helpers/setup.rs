@@ -103,10 +103,9 @@ pub async fn setup_contract(
     Ok(contract)
 }
 
-pub async fn setup() -> anyhow::Result<(Worker<Sandbox>, Contract, Contract, Contract, Vec<Account>)>
-{
-    let worker = near_workspaces::sandbox().await?;
-
+pub async fn setup(
+    worker: &Worker<Sandbox>,
+) -> anyhow::Result<(Contract, Contract, Contract, Vec<Account>)> {
     let near = worker.root_account()?;
 
     let shitzu = setup_token(&near, "SHITZU", "SHITZU", 24).await?;
@@ -125,5 +124,5 @@ pub async fn setup() -> anyhow::Result<(Worker<Sandbox>, Contract, Contract, Con
         accounts.push(account);
     }
 
-    Ok((worker, shitzu, nft, contract, accounts))
+    Ok((shitzu, nft, contract, accounts))
 }
