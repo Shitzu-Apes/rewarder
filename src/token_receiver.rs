@@ -51,11 +51,7 @@ impl NonFungibleTokenReceiver for Contract {
             "User already has already staked"
         );
 
-        self.on_stake_changed(
-            previous_owner_id.clone(),
-            token_id.clone(),
-            crate::nft::Action::Stake,
-        );
+        self.on_stake(previous_owner_id.clone(), token_id.clone());
 
         PromiseOrValue::Value(false)
     }
@@ -146,7 +142,7 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_nft_on_transfer_switch_primary_nft() {
+    fn test_nft_on_transfer_panic_if_primary_already_exist() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
         let alice = accounts(1);

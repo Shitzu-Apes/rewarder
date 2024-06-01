@@ -1,9 +1,5 @@
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::{
-    env, ext_contract, near,
-    serde::{Deserialize, Serialize},
-    AccountId, NearToken, Promise,
-};
+use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
 
 use crate::{Contract, ContractExt};
 
@@ -17,13 +13,6 @@ trait ShitzuNft {
         approval_id: Option<u64>,
         memo: Option<String>,
     );
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
-pub enum Action {
-    Stake,
-    Unstake,
 }
 
 #[near]
@@ -47,28 +36,26 @@ impl Contract {
             .then(
                 Self::ext(env::current_account_id())
                     .with_unused_gas_weight(1)
-                    .on_stake_changed(owner, token_id.to_string(), Action::Unstake),
+                    .on_unstake(owner, token_id.to_string()),
             )
     }
 
     #[private]
-    pub fn on_stake_changed(&mut self, account_id: AccountId, token_id: TokenId, action: Action) {
-        match action {
-            Action::Stake => {
-                self.account_to_token_id
-                    .set(account_id.clone(), Some(token_id.clone()));
+    pub fn on_stake(&mut self, account_id: AccountId, token_id: TokenId) {
+        self.account_to_token_id
+            .set(account_id.clone(), Some(token_id.clone()));
 
-                self.token_id_to_account
-                    .set(token_id.clone(), Some(account_id));
-                self.total_nft_staked += 1;
-            }
-            Action::Unstake => {
-                self.account_to_token_id.remove(&account_id);
-                self.token_id_to_account.remove(&token_id);
+        self.token_id_to_account
+            .set(token_id.clone(), Some(account_id));
+        self.total_nft_staked += 1;
+    }
 
-                self.total_nft_staked -= 1;
-            }
-        }
+    #[private]
+    pub fn on_unstake(&mut self, account_id: AccountId, token_id: TokenId) {
+        self.account_to_token_id.remove(&account_id);
+        self.token_id_to_account.remove(&token_id);
+
+        self.total_nft_staked -= 1;
     }
 }
 
@@ -108,7 +95,7 @@ mod tests {
             .build();
         testing_env!(context);
         contract.unstake();
-        contract.on_stake_changed(alice.clone(), "1".to_string(), Action::Unstake);
+        contract.on_unstake(alice.clone(), "1".to_string());
 
         assert_eq!(contract.account_to_token_id.get(&alice), None);
         assert_eq!(contract.total_nft_staked, 0);
