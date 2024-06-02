@@ -63,6 +63,7 @@ impl Contract {
 mod tests {
     use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
     use near_sdk::{
+        json_types::U128,
         test_utils::{accounts, VMContextBuilder},
         testing_env,
     };
@@ -73,9 +74,10 @@ mod tests {
     fn test_unstake() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
         let alice = accounts(1);
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
@@ -105,9 +107,11 @@ mod tests {
     fn test_query_staker_of_nft_correctly() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
+
         let alice = accounts(1);
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
@@ -117,7 +121,7 @@ mod tests {
         contract.nft_on_transfer(accounts(2), alice.clone(), "1".to_string(), "".to_string());
         assert_eq!(
             contract.primary_nft_of(alice.clone()),
-            Some("1".to_string())
+            ("1".to_string(), U128(0))
         );
 
         let staker = contract.token_id_to_account.get("1").unwrap();

@@ -1,8 +1,8 @@
 mod nft;
+mod owner;
 mod token_receiver;
 mod view;
 
-// Find all our documentation at https://docs.near.org
 use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
 use near_sdk::{
     borsh::BorshSerialize,
@@ -17,6 +17,8 @@ use primitive_types::U256;
 // Define the contract structure
 #[near(contract_state)]
 pub struct Contract {
+    owner: AccountId,
+
     reward_token: AccountId,
     nft: AccountId,
 
@@ -52,8 +54,10 @@ pub enum StorageKey {
 #[near]
 impl Contract {
     #[init]
-    pub fn new(reward_token: AccountId, nft: AccountId) -> Self {
+    pub fn new(owner: AccountId, reward_token: AccountId, nft: AccountId) -> Self {
         Self {
+            owner,
+
             reward_token,
             nft,
 
@@ -138,8 +142,9 @@ mod tests {
     fn test_double_reward_nft_staker() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let amount = 1000 * 10_u128.pow(18);
@@ -159,8 +164,9 @@ mod tests {
     fn test_nft_ranking() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let bob_id: AccountId = "bob.near".parse().unwrap();

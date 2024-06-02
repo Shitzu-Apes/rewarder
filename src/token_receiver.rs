@@ -68,10 +68,11 @@ mod tests {
     fn test_ft_on_transfer_with_nft_quadruple_score() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
         let alice = accounts(1);
 
         // Alice stakes NFT 1
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
@@ -100,8 +101,9 @@ mod tests {
     fn test_nft_on_transfer_incorrect_nft() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
 
-        let mut contract = Contract::new(reward_token, nft);
+        let mut contract = Contract::new(dao, reward_token, nft);
         let context = VMContextBuilder::new()
             .predecessor_account_id("not_nft".parse().unwrap())
             .build();
@@ -121,9 +123,10 @@ mod tests {
     fn test_nft_on_transfer_record_correctly() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
         let alice = accounts(1);
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
@@ -145,9 +148,10 @@ mod tests {
     fn test_nft_on_transfer_panic_if_primary_already_exist() {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
         let alice = accounts(1);
 
-        let mut contract = Contract::new(reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
