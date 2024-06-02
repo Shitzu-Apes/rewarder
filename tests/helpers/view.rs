@@ -15,14 +15,14 @@ pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyho
 pub async fn primary_nft_of(
     contract: &Contract,
     account_id: &AccountId,
-) -> anyhow::Result<Option<TokenId>> {
+) -> anyhow::Result<(TokenId, U128)> {
     let res = contract
         .call("primary_nft_of")
         .args_json((account_id,))
         .view()
         .await?;
 
-    Ok(res.json::<Option<TokenId>>()?)
+    Ok(res.json::<_>()?)
 }
 
 pub async fn nft_tokens_for_owner(

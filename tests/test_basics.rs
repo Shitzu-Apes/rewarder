@@ -66,9 +66,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
     call::stake(alice, rewarder.id(), &nft.id(), &alice_token.token_id).await?;
 
-    let token_id = view::primary_nft_of(&rewarder, &alice.id())
-        .await?
-        .expect("Fail to stake NFT");
+    let (token_id, _score) = view::primary_nft_of(&rewarder, &alice.id()).await?;
 
     assert_eq!(token_id, alice_token.token_id);
 
