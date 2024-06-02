@@ -124,7 +124,7 @@ mod tests {
         contract.nft_on_transfer(accounts(2), alice.clone(), "1".to_string(), "".to_string());
         assert_eq!(
             contract.primary_nft_of(alice.clone()),
-            ("1".to_string(), U128(0))
+            Some(("1".to_string(), U128(0)))
         );
 
         let staker = contract.token_id_to_account.get("1").unwrap();

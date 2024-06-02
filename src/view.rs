@@ -1,6 +1,6 @@
 use crate::{Contract, ContractExt};
 use near_contract_standards::non_fungible_token::TokenId;
-use near_sdk::{env, json_types::U128, near, AccountId};
+use near_sdk::{json_types::U128, near, AccountId};
 
 #[near]
 impl Contract {
@@ -24,13 +24,13 @@ impl Contract {
             .collect()
     }
 
-    pub fn primary_nft_of(&self, account_id: AccountId) -> (TokenId, U128) {
-        let token_id = self
-            .account_to_token_id
-            .get(&account_id)
-            .unwrap_or_else(|| env::panic_str("User does not have a primary NFT"));
-        let score = self.scores.get(token_id).unwrap_or(&0);
-        (token_id.clone(), U128(*score))
+    pub fn primary_nft_of(&self, account_id: AccountId) -> Option<(TokenId, U128)> {
+        if let Some(token_id) = self.account_to_token_id.get(&account_id) {
+            let score = self.scores.get(token_id).unwrap_or(&0);
+            Some((token_id.clone(), U128(*score)))
+        } else {
+            None
+        }
     }
 
     pub fn staker_of(&self, token_id: TokenId) -> Option<AccountId> {
