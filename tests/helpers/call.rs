@@ -112,12 +112,13 @@ pub async fn stake(
 }
 
 pub async fn send_rewards(
-    contract: &Contract,
+    operator: &Account,
+    contract: &AccountId,
     account_id: &AccountId,
     amount: U128,
 ) -> anyhow::Result<()> {
-    contract
-        .call("send_rewards")
+    operator
+        .call(contract, "send_rewards")
         .args_json((account_id, amount))
         .max_gas()
         .transact()

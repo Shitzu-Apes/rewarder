@@ -75,9 +75,10 @@ mod tests {
         let reward_token: AccountId = "reward_token".parse().unwrap();
         let nft: AccountId = "nft".parse().unwrap();
         let dao: AccountId = "dao".parse().unwrap();
+        let operator: AccountId = "operator".parse().unwrap();
         let alice = accounts(1);
 
-        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, operator, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();
@@ -111,7 +112,9 @@ mod tests {
 
         let alice = accounts(1);
 
-        let mut contract = Contract::new(dao, reward_token.clone(), nft.clone());
+        let operator: AccountId = "operator".parse().unwrap();
+
+        let mut contract = Contract::new(dao, operator, reward_token.clone(), nft.clone());
         let context = VMContextBuilder::new()
             .predecessor_account_id(nft.clone())
             .build();

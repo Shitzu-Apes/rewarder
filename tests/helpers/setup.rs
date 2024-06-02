@@ -78,6 +78,7 @@ pub async fn setup_nft(near: &Account) -> anyhow::Result<Contract> {
 pub async fn setup_contract(
     near: &Account,
     owner_id: &AccountId,
+    operator_id: &AccountId,
     reward_token: &Contract,
     nft: &Contract,
 ) -> anyhow::Result<Contract> {
@@ -99,7 +100,8 @@ pub async fn setup_contract(
             .call("new")
             .args_json(json!(
                 {
-                    "owner_id": owner_id,
+                    "owner": owner_id,
+                    "operator": operator_id,
                     "reward_token": reward_token.id(),
                     "nft": nft.id()
                 }
@@ -113,7 +115,7 @@ pub async fn setup_contract(
 
 pub async fn setup(
     worker: &Worker<Sandbox>,
-) -> anyhow::Result<(Contract, Contract, Contract, Vec<Account>)> {
+) -> anyhow::Result<(Account, Account, Contract, Contract, Contract, Vec<Account>)> {
     let near = worker.root_account()?;
     let dao = near
         .create_subaccount("dao".into())
@@ -121,10 +123,16 @@ pub async fn setup(
         .transact()
         .await?
         .into_result()?;
+    let tgbot = near
+        .create_subaccount("tgbot".into())
+        .initial_balance(NearToken::from_near(100))
+        .transact()
+        .await?
+        .into_result()?;
 
     let shitzu = setup_token(&near, "SHITZU", "SHITZU", 24).await?;
     let nft = setup_nft(&near).await?;
-    let contract = setup_contract(&near, dao.id(), &shitzu, &nft).await?;
+    let contract = setup_contract(&near, dao.id(), tgbot.id(), &shitzu, &nft).await?;
 
     let mut tasks: Vec<JoinHandle<anyhow::Result<Account>>> = Vec::new();
 
@@ -157,5 +165,5 @@ pub async fn setup(
         Err(e) => eprintln!("Error creating account: {}", e),
     });
 
-    Ok((shitzu, nft, contract, accounts))
+    Ok((dao, tgbot, shitzu, nft, contract, accounts))
 }

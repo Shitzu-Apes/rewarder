@@ -5,9 +5,9 @@ use near_sdk::{json_types::U128, NearToken};
 mod helpers;
 
 #[tokio::test]
-async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
+async fn test_only_operator_can_send_shitzu() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (token, _nft, rewarder, accounts) = setup(&worker).await?;
+    let (_dao, tgbot, token, _nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
@@ -38,6 +38,15 @@ async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
         .transact()
         .await?
         .into_result()
+        .is_err());
+
+    assert!(tgbot
+        .call(rewarder.id(), "send_rewards")
+        .args_json((alice.id(), amount))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()
         .is_ok());
 
     Ok(())
@@ -46,7 +55,7 @@ async fn test_only_contract_can_send_shitzu() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (token, nft, rewarder, accounts) = setup(&worker).await?;
+    let (_dao, tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -72,13 +81,13 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
     let reward = U128(NearToken::from_near(100).as_yoctonear());
 
-    call::send_rewards(&rewarder, alice.id(), reward).await?;
+    call::send_rewards(&tgbot, rewarder.id(), alice.id(), reward).await?;
     assert_eq!(
         view::ft_balance_of(&token, alice.id()).await?,
         U128(reward.0 * 2)
     );
 
-    call::send_rewards(&rewarder, bob.id(), reward).await?;
+    call::send_rewards(&tgbot, rewarder.id(), bob.id(), reward).await?;
     assert_eq!(view::ft_balance_of(&token, bob.id()).await?, reward);
 
     Ok(())
@@ -87,7 +96,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_unstake() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (token, nft, rewarder, accounts) = setup(&worker).await?;
+    let (_dao, _tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -148,7 +157,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
     // This test is to make sure that the score of the NFT is persisted after unstaking
     // or even the owner of the NFT is changed and come back to stake again
     let worker = near_workspaces::sandbox().await?;
-    let (token, nft, rewarder, accounts) = setup(&worker).await?;
+    let (_dao, tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -171,7 +180,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
     call::stake(alice, rewarder.id(), &nft.id(), &nft_token.token_id).await?;
 
-    call::send_rewards(&rewarder, alice.id(), reward).await?;
+    call::send_rewards(&tgbot, rewarder.id(), alice.id(), reward).await?;
 
     call::unstake(alice, rewarder.id()).await?;
 
@@ -184,7 +193,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
     call::stake(&bob, rewarder.id(), nft.id(), &nft_token.token_id).await?;
 
-    call::send_rewards(&rewarder, bob.id(), reward).await?;
+    call::send_rewards(&tgbot, rewarder.id(), bob.id(), reward).await?;
 
     assert_eq!(
         view::score_of(&rewarder, nft_token.token_id.clone()).await?,
@@ -197,7 +206,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_donation_quadruple_score() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (token, nft, rewarder, accounts) = setup(&worker).await?;
+    let (_dao, _tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
