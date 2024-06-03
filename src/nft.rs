@@ -1,7 +1,7 @@
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
 
-use crate::{Contract, ContractExt};
+use crate::{event::RewarderEvent, Contract, ContractExt};
 
 #[ext_contract(nft)]
 #[allow(dead_code)]
@@ -46,8 +46,14 @@ impl Contract {
             .set(account_id.clone(), Some(token_id.clone()));
 
         self.token_id_to_account
-            .set(token_id.clone(), Some(account_id));
+            .set(token_id.clone(), Some(account_id.clone()));
         self.total_nft_staked += 1;
+
+        RewarderEvent::NFTStaked {
+            account_id: account_id.clone(),
+            token_id: token_id.clone(),
+        }
+        .emit();
     }
 
     #[private]
@@ -56,6 +62,12 @@ impl Contract {
         self.token_id_to_account.remove(&token_id);
 
         self.total_nft_staked -= 1;
+
+        RewarderEvent::NFTUnstaked {
+            account_id: account_id.clone(),
+            token_id: token_id.clone(),
+        }
+        .emit();
     }
 }
 
@@ -64,7 +76,7 @@ mod tests {
     use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
     use near_sdk::{
         json_types::U128,
-        test_utils::{accounts, VMContextBuilder},
+        test_utils::{accounts, get_logs, VMContextBuilder},
         testing_env,
     };
 
@@ -132,5 +144,71 @@ mod tests {
 
         let staker = contract.staker_of("1".to_string());
         assert_eq!(staker, Some(alice));
+    }
+
+    #[test]
+    fn test_emit_nft_staked_event() {
+        let reward_token: AccountId = "reward_token".parse().unwrap();
+        let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
+        let operator: AccountId = "operator".parse().unwrap();
+        let alice = accounts(1);
+
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(nft.clone())
+            .build();
+        testing_env!(context);
+
+        // Alice stakes NFT 1
+        contract.nft_on_transfer(accounts(2), alice.clone(), "1".to_string(), "".to_string());
+
+        assert_eq!(
+            contract.account_to_token_id.get(&alice),
+            Some(&"1".to_string())
+        );
+        assert_eq!(contract.total_nft_staked, 1);
+
+        let logs = get_logs();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(
+            logs[0],
+            format!(
+                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"n_f_t_staked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
+                alice
+            )
+        );
+    }
+
+    #[test]
+    fn test_emit_nft_unstaked_event() {
+        let reward_token: AccountId = "reward_token".parse().unwrap();
+        let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
+        let operator: AccountId = "operator".parse().unwrap();
+        let alice = accounts(1);
+
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(nft.clone())
+            .build();
+        testing_env!(context);
+
+        // Alice stakes NFT 1
+        contract.nft_on_transfer(accounts(2), alice.clone(), "1".to_string(), "".to_string());
+        contract.on_unstake(alice.clone(), "1".to_string());
+
+        assert_eq!(contract.account_to_token_id.get(&alice), None);
+        assert_eq!(contract.total_nft_staked, 0);
+
+        let logs = get_logs();
+        assert_eq!(logs.len(), 2);
+        assert_eq!(
+            logs[1],
+            format!(
+                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"n_f_t_unstaked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
+                alice
+            )
+        );
     }
 }
