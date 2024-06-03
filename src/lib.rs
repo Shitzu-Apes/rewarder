@@ -96,21 +96,24 @@ impl Contract {
             )
     }
 
+    #[private]
     pub fn on_reward_sent(&mut self, primary_nft: Option<TokenId>, amount: U128) {
-        require!(
-            env::predecessor_account_id() == env::current_account_id()
-                || self
-                    .whitelisted_record_score_ids
-                    .contains(&env::predecessor_account_id()),
-            "Only owner or whitelisted contracts can call this function"
-        );
-
         if let Some(primary_nft) = primary_nft {
             self.internal_record_score(primary_nft, amount.0);
         }
 
         self.total_distribute =
             (U256::from(self.total_distribute) + U256::from(amount.0)).as_u128();
+    }
+
+    pub fn on_track_score(&mut self, primary_nft: TokenId, amount: U128) {
+        require!(
+            self.whitelisted_record_score_ids
+                .contains(&env::predecessor_account_id()),
+            "Only whitelisted contracts can call this function"
+        );
+
+        self.internal_record_score(primary_nft, amount.0);
     }
 }
 
