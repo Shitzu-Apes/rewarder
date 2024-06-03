@@ -10,15 +10,17 @@ use near_sdk::{
     json_types::U128,
     near, require,
     store::{LookupMap, TreeMap},
-    AccountId, BorshStorageKey, NearToken, Promise,
+    AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise,
 };
 use primitive_types::U256;
 
 // Define the contract structure
 #[near(contract_state)]
+#[derive(PanicOnDefault)]
 pub struct Contract {
     owner: AccountId,
     operator: AccountId,
+    whitelisted_record_score_ids: Vec<AccountId>,
 
     reward_token: AccountId,
     nft: AccountId,
@@ -31,14 +33,6 @@ pub struct Contract {
     total_donation: u128,
     scores: LookupMap<TokenId, u128>,
     ranking: TreeMap<u128, Vec<TokenId>>,
-}
-
-#[near]
-impl Default for Contract {
-    #[init]
-    fn default() -> Self {
-        panic!("No default initialization")
-    }
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -58,12 +52,14 @@ impl Contract {
     pub fn new(
         owner: AccountId,
         operator: AccountId,
+        whitelisted_record_score_ids: Vec<AccountId>,
         reward_token: AccountId,
         nft: AccountId,
     ) -> Self {
         Self {
             owner,
             operator,
+            whitelisted_record_score_ids,
 
             reward_token,
             nft,
@@ -92,7 +88,7 @@ impl Contract {
         ext_ft_core::ext(self.reward_token.clone())
             .with_unused_gas_weight(1)
             .with_attached_deposit(NearToken::from_yoctonear(1))
-            .ft_transfer(account_id.clone(), amount.into(), None)
+            .ft_transfer(account_id.clone(), amount, None)
             .then(
                 Self::ext(env::current_account_id())
                     .with_unused_gas_weight(1)
@@ -100,8 +96,15 @@ impl Contract {
             )
     }
 
-    #[private]
     pub fn on_reward_sent(&mut self, primary_nft: Option<TokenId>, amount: U128) {
+        require!(
+            env::predecessor_account_id() == env::current_account_id()
+                || self
+                    .whitelisted_record_score_ids
+                    .contains(&env::predecessor_account_id()),
+            "Only owner or whitelisted contracts can call this function"
+        );
+
         if let Some(primary_nft) = primary_nft {
             self.internal_record_score(primary_nft, amount.0);
         }
@@ -120,7 +123,7 @@ impl Contract {
     }
 
     fn internal_record_score(&mut self, primary_nft: TokenId, amount: u128) -> u128 {
-        let score = self.scores.get(&primary_nft).unwrap_or(&0).clone();
+        let score = *self.scores.get(&primary_nft).unwrap_or(&0);
         let new_score = (U256::from(score) + U256::from(amount)).as_u128();
         self.scores.set(primary_nft.clone(), Some(new_score));
 
@@ -161,7 +164,7 @@ mod tests {
         let dao: AccountId = "dao".parse().unwrap();
         let operator: AccountId = "operator".parse().unwrap();
 
-        let mut contract = Contract::new(dao, operator, reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let amount = 1000 * 10_u128.pow(18);
@@ -182,7 +185,13 @@ mod tests {
         let dao: AccountId = "dao".parse().unwrap();
         let operator: AccountId = "operator".parse().unwrap();
 
-        let mut contract = Contract::new(dao, operator.clone(), reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(
+            dao,
+            operator.clone(),
+            vec![],
+            reward_token.clone(),
+            nft.clone(),
+        );
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let amount = 1000 * 10_u128.pow(18);
@@ -202,7 +211,7 @@ mod tests {
         let dao: AccountId = "dao".parse().unwrap();
         let operator: AccountId = "operator".parse().unwrap();
 
-        let mut contract = Contract::new(dao, operator, reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let amount = 1000 * 10_u128.pow(18);
@@ -225,7 +234,7 @@ mod tests {
         let dao: AccountId = "dao".parse().unwrap();
         let operator: AccountId = "operator".parse().unwrap();
 
-        let mut contract = Contract::new(dao, operator, reward_token.clone(), nft.clone());
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
 
         let alice_id: AccountId = "alice.near".parse().unwrap();
         let bob_id: AccountId = "bob.near".parse().unwrap();

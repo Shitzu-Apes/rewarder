@@ -38,6 +38,6 @@ impl Contract {
     }
 
     pub fn score_of(&self, token_id: TokenId) -> U128 {
-        U128(self.scores.get(&token_id).unwrap_or(&0).clone())
+        U128(*self.scores.get(&token_id).unwrap_or(&0))
     }
 }

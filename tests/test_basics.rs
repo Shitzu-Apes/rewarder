@@ -18,7 +18,7 @@ async fn test_only_operator_can_send_shitzu() -> anyhow::Result<()> {
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
     call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
 
     assert_eq!(view::ft_balance_of(&token, rewarder.id()).await?, amount);
 
@@ -67,15 +67,15 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
     call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
 
     let [alice_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
     };
 
-    call::stake(alice, rewarder.id(), &nft.id(), &alice_token.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &alice_token.token_id).await?;
 
-    let (token_id, _score) = view::primary_nft_of(&rewarder, &alice.id()).await?;
+    let (token_id, _score) = view::primary_nft_of(&rewarder, alice.id()).await?;
 
     assert_eq!(token_id, alice_token.token_id);
 
@@ -108,7 +108,7 @@ async fn test_unstake() -> anyhow::Result<()> {
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
     call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
 
     let [alice_token1, alice_token2, ..] = &call::mint_nft(alice, nft.id(), 2).await?[..] else {
         anyhow::bail!("Expected at least 2 token, got less")
@@ -118,8 +118,8 @@ async fn test_unstake() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 1 token, got less")
     };
 
-    call::stake(alice, rewarder.id(), &nft.id(), &alice_token1.token_id).await?;
-    call::stake(bob, rewarder.id(), &nft.id(), &bob_token1.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &alice_token1.token_id).await?;
+    call::stake(bob, rewarder.id(), nft.id(), &bob_token1.token_id).await?;
     assert_eq!(
         view::nft_tokens_for_owner(&nft, rewarder.id())
             .await?
@@ -130,7 +130,7 @@ async fn test_unstake() -> anyhow::Result<()> {
     );
 
     // Staking again with another token should not work
-    call::stake(alice, rewarder.id(), &nft.id(), &alice_token2.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &alice_token2.token_id).await?;
     assert_eq!(
         view::nft_tokens_for_owner(&nft, alice.id()).await?,
         vec![alice_token2.clone()]
@@ -138,7 +138,7 @@ async fn test_unstake() -> anyhow::Result<()> {
 
     // Need to unstake before staking again
     call::unstake(alice, rewarder.id()).await?;
-    call::stake(alice, rewarder.id(), &nft.id(), &alice_token2.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &alice_token2.token_id).await?;
 
     assert_eq!(
         view::nft_tokens_for_owner(&nft, rewarder.id())
@@ -170,7 +170,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
     call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(&token.id(), alice, rewarder.id(), amount).await?;
+    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
 
     let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
@@ -178,7 +178,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
     let reward = U128(NearToken::from_near(100).as_yoctonear());
 
-    call::stake(alice, rewarder.id(), &nft.id(), &nft_token.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &nft_token.token_id).await?;
 
     call::send_rewards(&tgbot, rewarder.id(), alice.id(), reward).await?;
 
@@ -189,9 +189,9 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
         U128(reward.0 * 2)
     );
 
-    call::transfer_nft(&alice, bob.id(), &nft.id(), &nft_token.token_id).await?;
+    call::transfer_nft(alice, bob.id(), nft.id(), &nft_token.token_id).await?;
 
-    call::stake(&bob, rewarder.id(), nft.id(), &nft_token.token_id).await?;
+    call::stake(bob, rewarder.id(), nft.id(), &nft_token.token_id).await?;
 
     call::send_rewards(&tgbot, rewarder.id(), bob.id(), reward).await?;
 
@@ -223,9 +223,9 @@ async fn test_donation_quadruple_score() -> anyhow::Result<()> {
     let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
     };
-    call::stake(alice, rewarder.id(), &nft.id(), &nft_token.token_id).await?;
+    call::stake(alice, rewarder.id(), nft.id(), &nft_token.token_id).await?;
 
-    call::donate(&alice, token.id(), rewarder.id(), amount).await?;
+    call::donate(alice, token.id(), rewarder.id(), amount).await?;
 
     assert_eq!(
         view::score_of(&rewarder, nft_token.token_id.clone()).await?,

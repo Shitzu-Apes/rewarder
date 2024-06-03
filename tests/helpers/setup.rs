@@ -48,7 +48,7 @@ pub async fn setup_nft(near: &Account) -> anyhow::Result<Contract> {
     let wasm = std::fs::read(SHITZU_NFT_WASM_FILEPATH)?;
 
     let contract = near
-        .create_subaccount("nft".into())
+        .create_subaccount("nft")
         .initial_balance(NearToken::from_near(100))
         .transact()
         .await?
@@ -58,7 +58,7 @@ pub async fn setup_nft(near: &Account) -> anyhow::Result<Contract> {
         .into_result()?;
 
     log_tx_result(
-        &format!("Deployed NFT contract nft"),
+        "Deployed NFT contract nft",
         contract
             .call("new_init")
             .args_json(json!(
@@ -85,7 +85,7 @@ pub async fn setup_contract(
     let wasm = std::fs::read(REWARDER_WASM_FILEPATH)?;
 
     let contract = near
-        .create_subaccount("rewarder".into())
+        .create_subaccount("rewarder")
         .initial_balance(NearToken::from_near(100))
         .transact()
         .await?
@@ -102,6 +102,7 @@ pub async fn setup_contract(
                 {
                     "owner": owner_id,
                     "operator": operator_id,
+                    "whitelisted_record_score_ids": [],
                     "reward_token": reward_token.id(),
                     "nft": nft.id()
                 }
@@ -118,13 +119,13 @@ pub async fn setup(
 ) -> anyhow::Result<(Account, Account, Contract, Contract, Contract, Vec<Account>)> {
     let near = worker.root_account()?;
     let dao = near
-        .create_subaccount("dao".into())
+        .create_subaccount("dao")
         .initial_balance(NearToken::from_near(100))
         .transact()
         .await?
         .into_result()?;
     let tgbot = near
-        .create_subaccount("tgbot".into())
+        .create_subaccount("tgbot")
         .initial_balance(NearToken::from_near(100))
         .transact()
         .await?
@@ -140,7 +141,7 @@ pub async fn setup(
         let name: String = Name(EN).fake::<String>().to_lowercase();
 
         // Make sure it is a valid account name
-        let name = name.replace(" ", "_").replace("'", "").replace("-", "");
+        let name = name.replace(' ', "_").replace(['\'', '-'], "");
 
         let near = near.clone();
         let task: JoinHandle<anyhow::Result<Account>> = tokio::spawn(async move {
