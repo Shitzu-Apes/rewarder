@@ -2,6 +2,8 @@ use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 
+use super::{events::ContractEvent, log_tx_result};
+
 pub async fn storage_deposit(
     contract: &Contract,
     sender: &Account,
@@ -92,23 +94,25 @@ pub async fn stake(
     receiver: &AccountId,
     nft: &AccountId,
     token_id: &TokenId,
-) -> anyhow::Result<()> {
-    staker
-        .call(nft, "nft_transfer_call")
-        .args_json((
-            receiver,
-            token_id,
-            None::<u64>,
-            None::<String>,
-            "".to_string(),
-        ))
-        .deposit(NearToken::from_yoctonear(1))
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?;
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "stake",
+        staker
+            .call(nft, "nft_transfer_call")
+            .args_json((
+                receiver,
+                token_id,
+                None::<u64>,
+                None::<String>,
+                "".to_string(),
+            ))
+            .deposit(NearToken::from_yoctonear(1))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
 
-    Ok(())
+    Ok(events)
 }
 
 pub async fn send_rewards(
@@ -116,27 +120,31 @@ pub async fn send_rewards(
     contract: &AccountId,
     account_id: &AccountId,
     amount: U128,
-) -> anyhow::Result<()> {
-    operator
-        .call(contract, "send_rewards")
-        .args_json((account_id, amount))
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?;
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "send_rewards",
+        operator
+            .call(contract, "send_rewards")
+            .args_json((account_id, amount))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
 
-    Ok(())
+    Ok(events)
 }
 
-pub async fn unstake(staker: &Account, rewarder: &AccountId) -> anyhow::Result<()> {
-    staker
-        .call(rewarder, "unstake")
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?;
+pub async fn unstake(staker: &Account, rewarder: &AccountId) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "unstake",
+        staker
+            .call(rewarder, "unstake")
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
 
-    Ok(())
+    Ok(events)
 }
 
 pub async fn donate(
@@ -144,15 +152,17 @@ pub async fn donate(
     token: &AccountId,
     rewarder: &AccountId,
     amount: U128,
-) -> anyhow::Result<()> {
-    donor
-        .call(token, "ft_transfer_call")
-        .args_json((rewarder, amount, "".to_string(), "".to_string()))
-        .deposit(NearToken::from_yoctonear(1))
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?;
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "donate",
+        donor
+            .call(token, "ft_transfer_call")
+            .args_json((rewarder, amount, "".to_string(), "".to_string()))
+            .deposit(NearToken::from_yoctonear(1))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
 
-    Ok(())
+    Ok(events)
 }

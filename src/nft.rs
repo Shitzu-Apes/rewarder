@@ -1,5 +1,8 @@
 use crate::{event::RewarderEvent, Contract, ContractExt, GAS_FOR_NFT_TRANSFER};
-use near_contract_standards::non_fungible_token::TokenId;
+use near_contract_standards::{
+    fungible_token::events::{FtBurn, FtMint},
+    non_fungible_token::TokenId,
+};
 use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
 
 #[ext_contract(nft)]
@@ -49,7 +52,17 @@ impl Contract {
             .set(token_id.clone(), Some(account_id.clone()));
         self.total_nft_staked += 1;
 
-        RewarderEvent::NFTStaked {
+        let score = *self.scores.get(&token_id).unwrap_or(&0);
+        if score > 0 {
+            FtMint {
+                owner_id: &account_id,
+                amount: score.into(),
+                memo: None,
+            }
+            .emit();
+        }
+
+        RewarderEvent::NftStaked {
             account_id: account_id.clone(),
             token_id: token_id.clone(),
         }
@@ -63,7 +76,17 @@ impl Contract {
 
         self.total_nft_staked -= 1;
 
-        RewarderEvent::NFTUnstaked {
+        let score = *self.scores.get(&token_id).unwrap_or(&0);
+        if score > 0 {
+            FtBurn {
+                owner_id: &account_id,
+                amount: score.into(),
+                memo: None,
+            }
+            .emit();
+        }
+
+        RewarderEvent::NftUnstaked {
             account_id: account_id.clone(),
             token_id: token_id.clone(),
         }
@@ -174,7 +197,7 @@ mod tests {
         assert_eq!(
             logs[0],
             format!(
-                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"n_f_t_staked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
+                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"nft_staked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
                 alice
             )
         );
@@ -206,7 +229,7 @@ mod tests {
         assert_eq!(
             logs[1],
             format!(
-                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"n_f_t_unstaked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
+                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"nft_unstaked","data":{{"account_id":"{}","token_id":"1"}}}}"#,
                 alice
             )
         );

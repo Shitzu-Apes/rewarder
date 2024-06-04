@@ -1,11 +1,15 @@
 mod event;
+mod ft;
 mod nft;
 mod owner;
 mod token_receiver;
 mod view;
 
 use event::RewarderEvent;
-use near_contract_standards::{fungible_token::core::ext_ft_core, non_fungible_token::TokenId};
+use near_contract_standards::{
+    fungible_token::{core::ext_ft_core, events::FtMint},
+    non_fungible_token::TokenId,
+};
 use near_sdk::{
     borsh::BorshSerialize,
     env,
@@ -34,6 +38,7 @@ pub struct Contract {
     token_id_to_account: LookupMap<TokenId, AccountId>,
     total_nft_staked: u128,
 
+    total_score: u128,
     total_distribute: u128,
     total_donation: u128,
     scores: LookupMap<TokenId, u128>,
@@ -73,6 +78,7 @@ impl Contract {
             token_id_to_account: LookupMap::new(StorageKey::OwnerNFT),
             total_nft_staked: 0,
 
+            total_score: 0,
             total_distribute: 0,
             total_donation: 0,
             ranking: TreeMap::new(StorageKey::Ranking),
@@ -155,6 +161,15 @@ impl Contract {
         let mut ranking = self.ranking.get(&new_score).unwrap_or(&Vec::new()).clone();
         ranking.push(primary_nft.clone());
         self.ranking.insert(new_score, ranking);
+
+        self.total_score += amount;
+        let owner_id = self.token_id_to_account.get(&primary_nft).unwrap();
+        FtMint {
+            owner_id,
+            amount: amount.into(),
+            memo: None,
+        }
+        .emit();
 
         RewarderEvent::ScoreRecorded {
             token_id: primary_nft,
@@ -403,41 +418,6 @@ mod tests {
             format!(
                 r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"reward_sent","data":{{"account_id":"{}","amount":"{}","token_id":null}}}}"#,
                 alice_id, amount
-            )
-        );
-    }
-
-    fn test_emit_score_recorded_event() {
-        let reward_token: AccountId = "reward_token".parse().unwrap();
-        let nft: AccountId = "nft".parse().unwrap();
-        let dao: AccountId = "dao".parse().unwrap();
-        let operator: AccountId = "operator".parse().unwrap();
-
-        let mut contract = Contract::new(
-            dao,
-            operator.clone(),
-            vec![],
-            reward_token.clone(),
-            nft.clone(),
-        );
-
-        let alice_id: AccountId = "alice.near".parse().unwrap();
-        let amount = 1000 * 10_u128.pow(18);
-
-        let context = VMContextBuilder::new()
-            .predecessor_account_id(operator.clone())
-            .attached_deposit(NearToken::from_yoctonear(1))
-            .build();
-        testing_env!(context.clone());
-        contract.send_rewards(alice_id.clone(), U128(amount));
-
-        let logs = get_logs();
-        assert!(logs.len() == 2);
-        assert_eq!(
-            logs[1],
-            format!(
-                r#"EVENT_JSON:{{"standard":"shitzurewarder","version":"1.0.0","event":"score_recorded","data":{{"token_id":"1","score":"{}"}}}}"#,
-                amount * 2
             )
         );
     }

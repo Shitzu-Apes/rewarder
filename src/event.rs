@@ -13,12 +13,12 @@ pub enum RewarderEvent {
     #[event_version("1.0.0")]
     ScoreRecorded { token_id: TokenId, score: U128 },
     #[event_version("1.0.0")]
-    NFTStaked {
+    NftStaked {
         account_id: AccountId,
         token_id: TokenId,
     },
     #[event_version("1.0.0")]
-    NFTUnstaked {
+    NftUnstaked {
         account_id: AccountId,
         token_id: TokenId,
     },

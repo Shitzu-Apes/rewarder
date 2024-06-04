@@ -4,6 +4,7 @@ use near_sdk::{json_types::U128, near, AccountId};
 
 #[near]
 impl Contract {
+    #[allow(clippy::type_complexity)]
     pub fn get_leaderboard(
         &self,
         limit: Option<u64>,

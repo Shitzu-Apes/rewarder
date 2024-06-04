@@ -12,6 +12,12 @@ pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyho
     Ok(res.json::<U128>()?)
 }
 
+pub async fn ft_total_supply(contract: &Contract) -> anyhow::Result<U128> {
+    let res = contract.call("ft_total_supply").view().await?;
+
+    Ok(res.json::<U128>()?)
+}
+
 pub async fn primary_nft_of(
     contract: &Contract,
     account_id: &AccountId,
