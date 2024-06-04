@@ -1,5 +1,5 @@
 use anyhow::Ok;
-use helpers::{call, setup::setup, view};
+use helpers::{call, setup::setup, view, Ether};
 use near_sdk::{json_types::U128, NearToken};
 
 mod helpers;
@@ -13,7 +13,7 @@ async fn test_only_operator_can_send_shitzu() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
     };
 
-    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+    let amount: U128 = Ether::from(1_000_000).into();
     call::storage_deposit(&token, alice, None, None).await?;
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
 
@@ -61,7 +61,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
-    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+    let amount: U128 = Ether::from(1_000_000).into();
     call::storage_deposit(&token, alice, None, None).await?;
     call::storage_deposit(&token, bob, None, None).await?;
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
@@ -79,7 +79,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
     assert_eq!(token_id, alice_token.token_id);
 
-    let reward = U128(NearToken::from_near(100).as_yoctonear());
+    let reward: U128 = Ether::from(100).into();
 
     call::send_rewards(&tgbot, rewarder.id(), alice.id(), reward).await?;
     assert_eq!(
@@ -102,7 +102,7 @@ async fn test_unstake() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
-    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+    let amount: U128 = Ether::from(1_000_000).into();
     call::storage_deposit(&token, alice, None, None).await?;
     call::storage_deposit(&token, bob, None, None).await?;
     call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
@@ -163,7 +163,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
-    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+    let amount: U128 = Ether::from(1_000_000).into();
 
     call::storage_deposit(&token, alice, None, None).await?;
     call::storage_deposit(&token, bob, None, None).await?;
@@ -176,7 +176,7 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 1 token, got 0")
     };
 
-    let reward = U128(NearToken::from_near(100).as_yoctonear());
+    let reward: U128 = Ether::from(100).into();
 
     call::stake(alice, rewarder.id(), nft.id(), &nft_token.token_id).await?;
 
@@ -212,7 +212,7 @@ async fn test_donation_quadruple_score() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
-    let amount = U128(NearToken::from_near(1_000_000).as_yoctonear());
+    let amount: U128 = Ether::from(1_000_000).into();
 
     call::storage_deposit(&token, alice, None, None).await?;
     call::storage_deposit(&token, bob, None, None).await?;

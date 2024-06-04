@@ -131,7 +131,7 @@ pub async fn setup(
         .await?
         .into_result()?;
 
-    let shitzu = setup_token(&near, "SHITZU", "SHITZU", 24).await?;
+    let shitzu = setup_token(&near, "SHITZU", "SHITZU", 18).await?;
     let nft = setup_nft(&near).await?;
     let contract = setup_contract(&near, dao.id(), tgbot.id(), &shitzu, &nft).await?;
 

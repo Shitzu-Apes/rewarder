@@ -1,4 +1,5 @@
 use anyhow::Ok;
+use near_sdk::{json_types::U128, NearToken};
 use near_workspaces::result::{ExecutionFinalResult, ExecutionResult, Value};
 use owo_colors::OwoColorize;
 
@@ -27,4 +28,18 @@ pub fn log_tx_result(
         "TGas".bright_magenta().bold()
     );
     Ok(res.into_result()?)
+}
+
+pub struct Ether(pub u128);
+
+impl From<u128> for Ether {
+    fn from(value: u128) -> Self {
+        Self(value * 1_000_000_000_000_000_000)
+    }
+}
+
+impl Into<U128> for Ether {
+    fn into(self) -> U128 {
+        U128(self.0)
+    }
 }
