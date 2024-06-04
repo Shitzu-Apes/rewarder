@@ -1,7 +1,6 @@
+use crate::{event::RewarderEvent, Contract, ContractExt, GAS_FOR_NFT_TRANSFER};
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
-
-use crate::{event::RewarderEvent, Contract, ContractExt};
 
 #[ext_contract(nft)]
 #[allow(dead_code)]
@@ -26,6 +25,7 @@ impl Contract {
             .expect("No NFT found for the owner");
 
         nft::ext(self.nft.clone())
+            .with_static_gas(GAS_FOR_NFT_TRANSFER)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .nft_transfer(
                 owner.clone(),

@@ -12,9 +12,12 @@ use near_sdk::{
     json_types::U128,
     near, require,
     store::{LookupMap, TreeMap},
-    AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise,
+    AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
 };
 use primitive_types::U256;
+
+pub const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(8);
+pub const GAS_FOR_NFT_TRANSFER: Gas = Gas::from_tgas(10);
 
 // Define the contract structure
 #[near(contract_state)]
@@ -95,7 +98,7 @@ impl Contract {
         .emit();
 
         ext_ft_core::ext(self.reward_token.clone())
-            .with_unused_gas_weight(1)
+            .with_static_gas(GAS_FOR_FT_TRANSFER)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .ft_transfer(account_id.clone(), amount, None)
             .then(
