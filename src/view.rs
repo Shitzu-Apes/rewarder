@@ -4,7 +4,10 @@ use near_sdk::{json_types::U128, near, AccountId};
 
 #[near]
 impl Contract {
-    pub fn get_leaderboard(&self, limit: Option<u64>) -> Vec<(U128, Vec<(TokenId, AccountId)>)> {
+    pub fn get_leaderboard(
+        &self,
+        limit: Option<u64>,
+    ) -> Vec<(U128, Vec<(TokenId, Option<AccountId>)>)> {
         let limit = limit.unwrap_or(10);
         self.ranking
             .iter()
@@ -14,7 +17,7 @@ impl Contract {
                 let stakers_with_score =
                     x.1.iter()
                         .map(|token_id| {
-                            let staker = self.staker_of(token_id.clone()).unwrap();
+                            let staker = self.staker_of(token_id.clone());
                             (token_id.clone(), staker)
                         })
                         .collect::<Vec<_>>();

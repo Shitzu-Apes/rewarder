@@ -290,14 +290,17 @@ mod tests {
             vec![
                 (
                     U128((amount + fifty) * 2),
-                    vec![("2".to_string(), bob_id.clone())]
+                    vec![("2".to_string(), Some(bob_id.clone()))]
                 ),
-                (U128(amount * 2), vec![("4".to_string(), dan_id.clone())]),
+                (
+                    U128(amount * 2),
+                    vec![("4".to_string(), Some(dan_id.clone()))]
+                ),
                 (
                     U128((amount - fifty) * 2),
                     vec![
-                        ("1".to_string(), alice_id.clone()),
-                        ("3".to_string(), charlie_id.clone())
+                        ("1".to_string(), Some(alice_id.clone())),
+                        ("3".to_string(), Some(charlie_id.clone()))
                     ]
                 )
             ]
@@ -314,18 +317,54 @@ mod tests {
                 (
                     U128((amount + fifty) * 2),
                     vec![
-                        ("2".to_string(), bob_id.clone()),
-                        ("4".to_string(), dan_id.clone())
+                        ("2".to_string(), Some(bob_id.clone())),
+                        ("4".to_string(), Some(dan_id.clone()))
                     ]
                 ),
                 (
                     U128((amount - fifty) * 2),
                     vec![
-                        ("1".to_string(), alice_id.clone()),
-                        ("3".to_string(), charlie_id.clone())
+                        ("1".to_string(), Some(alice_id.clone())),
+                        ("3".to_string(), Some(charlie_id.clone()))
                     ]
                 )
             ]
+        );
+    }
+
+    #[test]
+    fn test_nft_has_score_after_unstake() {
+        let reward_token: AccountId = "reward_token".parse().unwrap();
+        let nft: AccountId = "nft".parse().unwrap();
+        let dao: AccountId = "dao".parse().unwrap();
+        let operator: AccountId = "operator".parse().unwrap();
+
+        let mut contract = Contract::new(dao, operator, vec![], reward_token.clone(), nft.clone());
+
+        let alice_id: AccountId = "alice.near".parse().unwrap();
+        let amount = 1000 * 10_u128.pow(18);
+
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(nft.clone())
+            .build();
+
+        testing_env!(context.clone());
+
+        // Alice stakes NFT 1
+        contract.nft_on_transfer(accounts(1), alice_id.clone(), "1".into(), "".into());
+        contract.internal_record_score("1".into(), amount * 2);
+
+        // Alice unstakes NFT 1
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(alice_id.clone())
+            .build();
+        testing_env!(context.clone());
+        contract.on_unstake(alice_id.clone(), "1".into());
+
+        let ranking = contract.get_leaderboard(None);
+        assert_eq!(
+            ranking,
+            vec![(U128(amount * 2), vec![("1".to_string(), None)])]
         );
     }
 
