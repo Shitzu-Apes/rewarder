@@ -8,11 +8,13 @@ use near_workspaces::{network::Sandbox, Account, Contract, Worker};
 use serde_json::json;
 use tokio::task::JoinHandle;
 
+use super::call;
 use super::log_tx_result;
 
-const SHITZU_TOKEN_WASM_FILEPATH: &str = "./res/test_token.wasm";
-const SHITZU_NFT_WASM_FILEPATH: &str = "./res//shitzu_nft.wasm";
-const REWARDER_WASM_FILEPATH: &str = "./res/rewarder.wasm";
+const SHITZU_TOKEN_WASM_FILEPATH: &str = "../../res/test_token.wasm";
+const SHITZU_NFT_WASM_FILEPATH: &str = "../../res//shitzu_nft.wasm";
+const REWARDER_WASM_FILEPATH: &str = "../../res/rewarder.wasm";
+const REF_FARM_WASM_FILEPATH: &str = "../../res/ref_farm.wasm";
 
 pub async fn setup_token(
     near: &Account,
@@ -114,6 +116,39 @@ pub async fn setup_contract(
     Ok(contract)
 }
 
+pub async fn setup_ref_farm(
+    near: &Account,
+    subaccount: String,
+    owner_id: &AccountId,
+) -> anyhow::Result<Contract> {
+    let wasm = std::fs::read(REF_FARM_WASM_FILEPATH)?;
+
+    let contract = near
+        .create_subaccount(&subaccount)
+        .initial_balance(NearToken::from_near(100))
+        .transact()
+        .await?
+        .into_result()?
+        .deploy(&wasm)
+        .await?
+        .into_result()?;
+
+    log_tx_result(
+        "Deployed ref farm contract",
+        contract
+            .call("new")
+            .args_json(json!(
+                {
+                    "owner": owner_id,
+                }
+            ))
+            .transact()
+            .await?,
+    )?;
+
+    Ok(contract)
+}
+
 pub async fn setup(
     worker: &Worker<Sandbox>,
 ) -> anyhow::Result<(Account, Account, Contract, Contract, Contract, Vec<Account>)> {
@@ -134,6 +169,26 @@ pub async fn setup(
     let shitzu = setup_token(&near, "SHITZU", "SHITZU", 18).await?;
     let nft = setup_nft(&near).await?;
     let contract = setup_contract(&near, dao.id(), tgbot.id(), &shitzu, &nft).await?;
+
+    let ref_admin = near
+        .create_subaccount("ref_admin")
+        .initial_balance(NearToken::from_near(100))
+        .transact()
+        .await?
+        .into_result()?;
+
+    let xref = setup_token(&near, "xref", "xref", 18).await?;
+    let xref_staking =
+        setup_ref_farm(&near, "xref_staking".parse().unwrap(), ref_admin.id()).await?;
+    call::create_seed(&ref_admin, xref_staking.id(), xref.id(), 18).await?;
+
+    let shitzu_staking =
+        setup_ref_farm(&near, "shitzu_staking".parse().unwrap(), ref_admin.id()).await?;
+    call::create_seed(&ref_admin, shitzu_staking.id(), shitzu.id(), 18).await?;
+
+    let mock_lp_token = setup_token(&near, "ref_4369", "ref_4369", 24).await?;
+    let lp_staking = setup_ref_farm(&near, "lp_staking".parse().unwrap(), ref_admin.id()).await?;
+    call::create_seed(&ref_admin, lp_staking.id(), mock_lp_token.id(), 24).await?;
 
     let mut tasks: Vec<JoinHandle<anyhow::Result<Account>>> = Vec::new();
 

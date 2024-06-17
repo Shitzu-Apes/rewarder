@@ -1,0 +1,15 @@
+
+[package]
+name = "memeseason"
+version = "0.1.0"
+authors = ["pysr <gm@pysr.xyz>"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+near-contract-standards.workspace = true
+near-sdk.workspace = true
+primitive-types.workspace = true

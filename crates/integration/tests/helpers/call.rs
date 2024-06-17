@@ -166,3 +166,23 @@ pub async fn donate(
 
     Ok(events)
 }
+
+pub async fn create_seed(
+    owner: &Account,
+    farm_id: &AccountId,
+    seed_id: &AccountId,
+    seed_decimal: u32,
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "create_seed",
+        owner
+            .call(farm_id, "create_seed")
+            .args_json((seed_id, seed_decimal))
+            .deposit(NearToken::from_yoctonear(1))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
+
+    Ok(events)
+}
