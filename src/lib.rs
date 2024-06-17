@@ -44,6 +44,8 @@ pub struct Contract {
     total_donation: u128,
     scores: LookupMap<TokenId, u128>,
     ranking: TreeMap<u128, Vec<TokenId>>,
+
+    ref_memeseason_reward_checkpoint: LookupMap<AccountId, u64>,
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -55,6 +57,7 @@ pub enum StorageKey {
     Scores,
     DonationAmounts,
     DonorRanking,
+    RefMemeSeasonRewardCheckpoint,
 }
 
 #[near]
@@ -84,6 +87,9 @@ impl Contract {
             total_donation: 0,
             ranking: TreeMap::new(StorageKey::Ranking),
             scores: LookupMap::new(StorageKey::Scores),
+            ref_memeseason_reward_checkpoint: LookupMap::new(
+                StorageKey::RefMemeSeasonRewardCheckpoint,
+            ),
         }
     }
 

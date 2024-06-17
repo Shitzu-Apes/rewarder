@@ -2,7 +2,7 @@ use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{
     env, ext_contract,
     json_types::U128,
-    near,
+    near, require,
     serde::{Deserialize, Serialize},
     AccountId, NearToken, Promise, PromiseResult,
 };
@@ -28,6 +28,15 @@ trait BoostFarm {
 #[near]
 impl Contract {
     pub fn claim_ref_memeseason(&mut self) -> Promise {
+        require!(
+            self.ref_memeseason_reward_checkpoint
+                .get(&env::predecessor_account_id())
+                .map_or(true, |checkpoint| {
+                    env::block_timestamp() - checkpoint > 24 * 60 * 60
+                }),
+            "Too soon to claim the reward.",
+        );
+
         let primary_nft = self
             .account_to_token_id
             .get(&env::predecessor_account_id())
@@ -82,6 +91,9 @@ impl Contract {
             }
             None => 0,
         };
+
+        self.ref_memeseason_reward_checkpoint
+            .insert(env::predecessor_account_id(), env::block_timestamp());
 
         self.internal_record_score(primary_nft, xref_score + shitzu_score + lp_score);
     }
