@@ -13,3 +13,6 @@ anyhow.workspace = true
 near-contract-standards.workspace = true
 near-sdk.workspace = true
 primitive-types.workspace = true
+
+[features]
+integration-test = []

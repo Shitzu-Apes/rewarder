@@ -12,6 +12,11 @@ use near_sdk::{
 };
 use primitive_types::U256;
 
+#[cfg(not(feature = "integration-test"))]
+pub const DAY: u64 = 60 * 60 * 24 * 1_000_000_000; // ~3 days
+#[cfg(feature = "integration-test")]
+pub const DAY: u64 = 60 * 1_000_000_000;
+
 type SeedId = String;
 
 #[derive(Serialize, Deserialize, Default)]
@@ -78,7 +83,7 @@ impl Contract {
             self.checkpoint
                 .get(&env::predecessor_account_id())
                 .map_or(true, |checkpoint| {
-                    env::block_timestamp() - checkpoint > 24 * 60 * 60 * 1000_000_000
+                    env::block_timestamp() - checkpoint > DAY
                 }),
             "Too soon to claim the reward.",
         );

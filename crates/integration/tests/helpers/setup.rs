@@ -17,7 +17,7 @@ const SHITZU_TOKEN_WASM_FILEPATH: &str = "../../res/test_token.wasm";
 const SHITZU_NFT_WASM_FILEPATH: &str = "../../res//shitzu_nft.wasm";
 const REWARDER_WASM_FILEPATH: &str = "../../res/rewarder.wasm";
 const REF_FARM_WASM_FILEPATH: &str = "../../res/ref_farm.wasm";
-const MEMESEASON_WASM_FILEPATH: &str = "../../res/memeseason.wasm";
+const MEMESEASON_WASM_FILEPATH: &str = "../../res/memeseason_integration_test.wasm";
 
 pub async fn setup_token(
     near: &Account,

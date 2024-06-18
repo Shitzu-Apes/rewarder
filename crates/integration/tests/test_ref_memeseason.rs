@@ -76,7 +76,14 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         "Try to claim too soon, expected error"
     );
 
-    // worker.fast_forward(24 * 60 * 60).await?;
+    worker.fast_forward(600).await?;
+
+    assert!(
+        call::claim_ref_memeseason(&alice, memeseason.id())
+            .await
+            .is_ok(),
+        "Expected successful claim"
+    );
 
     Ok(())
 }
