@@ -86,23 +86,14 @@ impl Contract {
         let primary_nft =
             rewarder::ext(self.rewarder.clone()).primary_nft_of(env::predecessor_account_id());
 
-        let xref_staking = ref_finance::ext("memefarm-xref-shitzu.ref-labs.near".parse().unwrap())
-            .get_farmer_seed(
-                env::current_account_id(),
-                "xtoken.ref-finance.near".parse().unwrap(),
-            );
+        let xref_staking = ref_finance::ext(self.xref.farm_id.clone())
+            .get_farmer_seed(env::current_account_id(), self.xref.seed_id.clone());
 
-        let shitzu_staking = ref_finance::ext("meme-farming_011.ref-labs.near".parse().unwrap())
-            .get_farmer_seed(
-                env::current_account_id(),
-                "token.0xshitzu.near".parse().unwrap(),
-            );
+        let shitzu_staking = ref_finance::ext(self.shitzu.farm_id.clone())
+            .get_farmer_seed(env::current_account_id(), self.shitzu.seed_id.clone());
 
-        let lp_staking = ref_finance::ext("boostfarm.ref-labs.near".parse::<AccountId>().unwrap())
-            .get_farmer_seed(
-                env::current_account_id(),
-                "v2.ref-finance.near@4369".parse().unwrap(),
-            );
+        let lp_staking = ref_finance::ext(self.lp.farm_id.clone())
+            .get_farmer_seed(env::current_account_id(), self.lp.seed_id.clone());
 
         primary_nft
             .and(xref_staking)
@@ -130,9 +121,9 @@ impl Contract {
                 // amount * 10**18 * (10**24) / (11 * 10**21) = amount * 10**18 / 0.011
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    11000000000000000000000,
-                    200,
-                    18,
+                    self.xref.factor,
+                    self.xref.cap,
+                    self.xref.decimals,
                 )
             }
             None => 0,
@@ -149,9 +140,9 @@ impl Contract {
                 // amount * 10**18 * (10**24) / (547 * 10**21) = amount * 10**18 / 5.47
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    547000000000000000000000,
-                    100,
-                    18,
+                    self.shitzu.factor,
+                    self.shitzu.cap,
+                    self.shitzu.decimals,
                 )
             }
             None => 0,
@@ -168,9 +159,9 @@ impl Contract {
                 // amount * 10**24 * (10**24) / (17 * 10**21) = amount * 10**27 / 17
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    17000000000000000000000000,
-                    100,
-                    24,
+                    self.lp.factor,
+                    self.lp.cap,
+                    self.lp.decimals,
                 )
             }
             None => 0,
