@@ -1,4 +1,4 @@
-use near_sdk::{env, near, require, Promise};
+use near_sdk::{env, near, require, AccountId, Promise};
 
 use crate::{Contract, ContractExt};
 
@@ -16,6 +16,12 @@ impl Contract {
         Promise::new(env::current_account_id())
             .deploy_contract(code)
             .as_return()
+    }
+
+    pub fn whitelist(&mut self, account_id: AccountId) {
+        self.require_owner();
+
+        self.whitelisted_record_score_ids.push(account_id);
     }
 }
 

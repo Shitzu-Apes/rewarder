@@ -186,3 +186,21 @@ pub async fn create_seed(
 
     Ok(events)
 }
+
+pub async fn whitelist(
+    owner: &Account,
+    rewarder: &AccountId,
+    account_id: &AccountId,
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "whitelist",
+        owner
+            .call(rewarder, "whitelist")
+            .args_json((account_id,))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
+
+    Ok(events)
+}

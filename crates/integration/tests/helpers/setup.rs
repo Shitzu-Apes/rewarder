@@ -273,6 +273,8 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let memeseason =
         setup_memeseason(&near, &rewarder, &xref_config, &shitzu_config, &lp_config).await?;
 
+    call::whitelist(&dao, rewarder.id(), memeseason.id()).await?;
+
     let mut tasks: Vec<JoinHandle<anyhow::Result<Account>>> = Vec::new();
 
     for _ in 0..10 {
