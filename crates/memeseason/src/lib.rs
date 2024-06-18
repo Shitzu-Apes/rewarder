@@ -97,7 +97,7 @@ impl Contract {
     pub fn on_claim_ref_memeseason(
         &mut self,
         #[callback_unwrap] primary_nft: Option<(TokenId, U128)>,
-    ) {
+    ) -> Promise {
         let primary_nft = primary_nft.expect("Primary NFT not found");
 
         let xref_staking_result = env::promise_result(1);
@@ -162,7 +162,7 @@ impl Contract {
             .insert(&env::predecessor_account_id(), &env::block_timestamp());
 
         rewarder::ext(self.rewarder.clone())
-            .on_track_score(primary_nft.0, U128(xref_score + shitzu_score + lp_score));
+            .on_track_score(primary_nft.0, U128(xref_score + shitzu_score + lp_score))
     }
 }
 
