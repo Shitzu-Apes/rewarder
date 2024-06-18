@@ -39,8 +39,8 @@ trait Rewarder {
 pub struct FarmConfig {
     pub farm_id: AccountId,
     pub seed_id: SeedId,
-    pub factor: u128,
-    pub cap: u128,
+    pub factor: U128,
+    pub cap: U128,
     pub decimals: u8,
 }
 
@@ -121,8 +121,8 @@ impl Contract {
                 // amount * 10**18 * (10**24) / (11 * 10**21) = amount * 10**18 / 0.011
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    self.xref.factor,
-                    self.xref.cap,
+                    self.xref.factor.0,
+                    self.xref.cap.0,
                     self.xref.decimals,
                 )
             }
@@ -140,8 +140,8 @@ impl Contract {
                 // amount * 10**18 * (10**24) / (547 * 10**21) = amount * 10**18 / 5.47
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    self.shitzu.factor,
-                    self.shitzu.cap,
+                    self.shitzu.factor.0,
+                    self.shitzu.cap.0,
                     self.shitzu.decimals,
                 )
             }
@@ -159,8 +159,8 @@ impl Contract {
                 // amount * 10**24 * (10**24) / (17 * 10**21) = amount * 10**27 / 17
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
-                    self.lp.factor,
-                    self.lp.cap,
+                    self.lp.factor.0,
+                    self.lp.cap.0,
                     self.lp.decimals,
                 )
             }

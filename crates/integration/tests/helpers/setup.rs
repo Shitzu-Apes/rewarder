@@ -2,6 +2,8 @@ use fake::faker::name::raw::*;
 use fake::locales::*;
 use fake::Fake;
 use futures::future::join_all;
+use near_sdk::json_types::U128;
+use near_sdk::serde::Serialize;
 use near_sdk::AccountId;
 use near_sdk::NearToken;
 use near_workspaces::{network::Sandbox, Account, Contract, Worker};
@@ -15,6 +17,7 @@ const SHITZU_TOKEN_WASM_FILEPATH: &str = "../../res/test_token.wasm";
 const SHITZU_NFT_WASM_FILEPATH: &str = "../../res//shitzu_nft.wasm";
 const REWARDER_WASM_FILEPATH: &str = "../../res/rewarder.wasm";
 const REF_FARM_WASM_FILEPATH: &str = "../../res/ref_farm.wasm";
+const MEMESEASON_WASM_FILEPATH: &str = "../../res/memeseason.wasm";
 
 pub async fn setup_token(
     near: &Account,
@@ -149,12 +152,61 @@ pub async fn setup_ref_farm(
     Ok(contract)
 }
 
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FarmConfig {
+    pub farm_id: AccountId,
+    pub seed_id: String,
+    pub factor: U128,
+    pub cap: U128,
+    pub decimals: u8,
+}
+
+pub async fn setup_memeseason(
+    near: &Account,
+    rewarder: &Contract,
+    xref: &FarmConfig,
+    shitzu: &FarmConfig,
+    lp: &FarmConfig,
+) -> anyhow::Result<Contract> {
+    let wasm = std::fs::read(MEMESEASON_WASM_FILEPATH)?;
+
+    let contract = near
+        .create_subaccount("memeseason")
+        .initial_balance(NearToken::from_near(100))
+        .transact()
+        .await?
+        .into_result()?
+        .deploy(&wasm)
+        .await?
+        .into_result()?;
+
+    log_tx_result(
+        "Deployed memeseason contract",
+        contract
+            .call("new")
+            .args_json(json!(
+                {
+                    "rewarder": rewarder.id(),
+                    "xref": xref,
+                    "shitzu": shitzu,
+                    "lp": lp,
+                }
+            ))
+            .transact()
+            .await?,
+    )?;
+
+    Ok(contract)
+}
+
 pub struct SetupResult {
     pub dao: Account,
     pub tgbot: Account,
     pub shitzu: Contract,
     pub nft: Contract,
     pub rewarder: Contract,
+    pub memeseason: Contract,
     pub accounts: Vec<Account>,
 }
 
@@ -188,14 +240,38 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let xref_staking =
         setup_ref_farm(&near, "xref_staking".parse().unwrap(), ref_admin.id()).await?;
     call::create_seed(&ref_admin, xref_staking.id(), xref.id(), 18).await?;
+    let xref_config = FarmConfig {
+        farm_id: xref_staking.id().clone(),
+        seed_id: xref.id().to_string(),
+        factor: U128("11000000000000000000000".parse().unwrap()),
+        cap: U128(200),
+        decimals: 18,
+    };
 
     let shitzu_staking =
         setup_ref_farm(&near, "shitzu_staking".parse().unwrap(), ref_admin.id()).await?;
     call::create_seed(&ref_admin, shitzu_staking.id(), shitzu.id(), 18).await?;
+    let shitzu_config = FarmConfig {
+        farm_id: shitzu_staking.id().clone(),
+        seed_id: shitzu.id().to_string(),
+        factor: U128("547000000000000000000000".parse().unwrap()),
+        cap: U128(100),
+        decimals: 18,
+    };
 
     let mock_lp_token = setup_token(&near, "ref_4369", "ref_4369", 24).await?;
     let lp_staking = setup_ref_farm(&near, "lp_staking".parse().unwrap(), ref_admin.id()).await?;
     call::create_seed(&ref_admin, lp_staking.id(), mock_lp_token.id(), 24).await?;
+    let lp_config = FarmConfig {
+        farm_id: lp_staking.id().clone(),
+        seed_id: mock_lp_token.id().to_string(),
+        factor: U128("17000000000000000000000000".parse().unwrap()),
+        cap: U128(100),
+        decimals: 24,
+    };
+
+    let memeseason =
+        setup_memeseason(&near, &rewarder, &xref_config, &shitzu_config, &lp_config).await?;
 
     let mut tasks: Vec<JoinHandle<anyhow::Result<Account>>> = Vec::new();
 
@@ -234,6 +310,7 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
         shitzu,
         nft,
         rewarder,
+        memeseason,
         accounts,
     })
 }
