@@ -6,7 +6,7 @@ use near_sdk::{
     collections::LookupMap,
     env, ext_contract,
     json_types::U128,
-    log, near, require,
+    near, require,
     serde::{Deserialize, Serialize},
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseResult,
 };
@@ -78,7 +78,7 @@ impl Contract {
             self.checkpoint
                 .get(&env::predecessor_account_id())
                 .map_or(true, |checkpoint| {
-                    env::block_timestamp() - checkpoint > 24 * 60 * 60
+                    env::block_timestamp() - checkpoint > 24 * 60 * 60 * 1000_000_000
                 }),
             "Too soon to claim the reward.",
         );
@@ -99,12 +99,16 @@ impl Contract {
             .and(xref_staking)
             .and(shitzu_staking)
             .and(lp_staking)
-            .then(Self::ext(env::current_account_id()).on_claim_ref_memeseason())
+            .then(
+                Self::ext(env::current_account_id())
+                    .on_claim_ref_memeseason(env::predecessor_account_id()),
+            )
     }
 
     #[private]
     pub fn on_claim_ref_memeseason(
         &mut self,
+        claimer: AccountId,
         #[callback_unwrap] primary_nft: Option<(TokenId, U128)>,
     ) -> Promise {
         let primary_nft = primary_nft.expect("Primary NFT not found");
@@ -167,8 +171,7 @@ impl Contract {
             None => 0,
         };
 
-        self.checkpoint
-            .insert(&env::predecessor_account_id(), &env::block_timestamp());
+        self.checkpoint.insert(&claimer, &env::block_timestamp());
 
         rewarder::ext(self.rewarder.clone())
             .on_track_score(primary_nft.0, U128(xref_score + shitzu_score + lp_score))

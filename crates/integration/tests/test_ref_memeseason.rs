@@ -34,13 +34,7 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
     call::mint_token(&shitzu, alice.id(), amount).await?;
     call::mint_token(&shitzu, rewarder.id(), amount).await?;
 
-    call::stake_seed(
-        &alice,
-        shitzu.id(),
-        U128(Ether::from(100).0),
-        shitzu_staking.id(),
-    )
-    .await?;
+    call::stake_seed(&alice, shitzu.id(), amount, shitzu_staking.id()).await?;
 
     let seed = view::get_farmer_seed(&shitzu_staking, alice.id(), &shitzu.id().to_string()).await?;
     assert!(
@@ -62,6 +56,27 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         "Expected score to be greater than 0, got {}",
         score.0
     );
+
+    let checkpoint = view::get_user_checkpoint(&memeseason, alice.id()).await?;
+    assert!(
+        checkpoint.is_some(),
+        "Expected checkpoint to be Some, got None"
+    );
+
+    assert!(
+        checkpoint.unwrap() > 0,
+        "Expected checkpoint to be greater than 0, got {}",
+        checkpoint.unwrap()
+    );
+
+    assert!(
+        call::claim_ref_memeseason(&alice, memeseason.id())
+            .await
+            .is_err(),
+        "Try to claim too soon, expected error"
+    );
+
+    // worker.fast_forward(24 * 60 * 60).await?;
 
     Ok(())
 }

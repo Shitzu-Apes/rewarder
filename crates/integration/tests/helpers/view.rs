@@ -73,3 +73,16 @@ pub async fn get_farmer_seed(
 
     Ok(res.json::<FarmerSeed>()?)
 }
+
+pub async fn get_user_checkpoint(
+    contract: &Contract,
+    account_id: &AccountId,
+) -> anyhow::Result<Option<u64>> {
+    let res = contract
+        .call("get_user_checkpoint")
+        .args_json((account_id,))
+        .view()
+        .await?;
+
+    Ok(res.json::<Option<u64>>()?)
+}
