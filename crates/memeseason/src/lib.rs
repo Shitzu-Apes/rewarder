@@ -14,8 +14,7 @@ use primitive_types::U256;
 
 type SeedId = String;
 
-#[derive(Serialize, Default)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, Deserialize))]
+#[derive(Serialize, Deserialize, Default)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FarmerSeed {
     pub free_amount: U128,
@@ -34,7 +33,7 @@ trait Rewarder {
     fn on_track_score(&mut self, primary_nft: TokenId, amount: U128);
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
 #[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct FarmConfig {
