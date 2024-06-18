@@ -1,6 +1,7 @@
 use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::{Account, Contract};
+use serde_json::json;
 
 use super::{events::ContractEvent, log_tx_result};
 
@@ -197,6 +198,30 @@ pub async fn whitelist(
         owner
             .call(rewarder, "whitelist")
             .args_json((account_id,))
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
+
+    Ok(events)
+}
+
+pub async fn stake_seed(
+    staker: &Account,
+    token: &AccountId,
+    amount: U128,
+    farm_id: &AccountId,
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "stake_seed",
+        staker
+            .call(token, "ft_transfer_call")
+            .args_json(json!({
+                "receiver_id": farm_id,
+                "amount": amount,
+                "msg": "\"Free\"",
+            }))
+            .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
             .await?,

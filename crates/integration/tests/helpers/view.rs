@@ -1,5 +1,5 @@
 use near_contract_standards::non_fungible_token::{Token, TokenId};
-use near_sdk::{json_types::U128, AccountId};
+use near_sdk::{json_types::U128, serde::Deserialize, AccountId};
 use near_workspaces::Contract;
 
 pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyhow::Result<U128> {
@@ -52,4 +52,24 @@ pub async fn score_of(contract: &Contract, token_id: TokenId) -> anyhow::Result<
         .await?;
 
     Ok(res.json::<U128>()?)
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FarmerSeed {
+    pub free_amount: U128,
+}
+
+pub async fn get_farmer_seed(
+    contract: &Contract,
+    farmer_id: &AccountId,
+    seed_id: &str,
+) -> anyhow::Result<FarmerSeed> {
+    let res = contract
+        .call("get_farmer_seed")
+        .args_json((farmer_id, seed_id))
+        .view()
+        .await?;
+
+    Ok(res.json::<FarmerSeed>()?)
 }

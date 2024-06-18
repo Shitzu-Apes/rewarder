@@ -207,6 +207,11 @@ pub struct SetupResult {
     pub nft: Contract,
     pub rewarder: Contract,
     pub memeseason: Contract,
+    pub xref: Contract,
+    pub xref_staking: Contract,
+    pub shitzu_staking: Contract,
+    pub lp_token: Contract,
+    pub lp_staking: Contract,
     pub accounts: Vec<Account>,
 }
 
@@ -313,6 +318,11 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
         nft,
         rewarder,
         memeseason,
+        xref,
+        xref_staking,
+        shitzu_staking,
+        lp_token: mock_lp_token,
+        lp_staking,
         accounts,
     })
 }
