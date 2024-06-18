@@ -139,7 +139,7 @@ pub async fn setup_ref_farm(
             .call("new")
             .args_json(json!(
                 {
-                    "owner": owner_id,
+                    "owner_id": owner_id,
                 }
             ))
             .transact()

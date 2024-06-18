@@ -177,7 +177,7 @@ pub async fn create_seed(
         "create_seed",
         owner
             .call(farm_id, "create_seed")
-            .args_json((seed_id, seed_decimal))
+            .args_json((seed_id, seed_decimal, None::<U128>, None::<u32>))
             .deposit(NearToken::from_yoctonear(1))
             .max_gas()
             .transact()
