@@ -162,3 +162,28 @@ impl From<Ether> for U128 {
         Self(value.0)
     }
 }
+
+pub fn assert_approx_eq(
+    actual: U128,
+    expected: U128,
+    perc: u128, // 2 decimal places e.g. 1000 = 10.00%
+    message: &str,
+) -> anyhow::Result<()> {
+    let actual = actual.0;
+    let expected = expected.0;
+    let perc = perc as f64 / 10000.0;
+    let diff = (actual as f64 - expected as f64).abs();
+    let avg = (actual as f64 + expected as f64) / 2.0;
+    let diff_perc = diff / avg;
+    if diff_perc > perc {
+        anyhow::bail!(
+            "{}\nExpected: {}\nActual: {}\nDiff: {}\nDiff %: {:.2}%",
+            message,
+            expected,
+            actual,
+            diff,
+            diff_perc * 100.0
+        );
+    }
+    Ok(())
+}

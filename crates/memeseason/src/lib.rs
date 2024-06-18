@@ -146,7 +146,7 @@ impl Contract {
                 // shitstars = Math.min(sqrt(shitzu_staking) / 5.47, 100)
 
                 // SHITZU is 18 decimals
-                // amount * 10**18 * (10**24) / (547 * 10**21) = amount * 10**18 / 5.47
+                // amount * 10**18 * (10**24) / (5470 * 10**21) = amount * 10**18 / 5.47
                 self.internal_calculate_staking_score(
                     farmer_seed.free_amount.0,
                     self.shitzu.factor.0,
@@ -206,57 +206,13 @@ impl Contract {
         decimals: u8,
     ) -> u128 {
         // amount * 10**decimals * (10**24) / (factor * 10**21) = amount * 10**decimals / factor
-        let score = (U256::from(amount).integer_sqrt()
-            * U256::from(NearToken::from_near(1).as_yoctonear())
+        let amount = U256::from(amount) * U256::exp10(decimals.into()); // since we are about to square root it we need to multiply it by 10^decimals
+        let score = (amount.integer_sqrt() // square root of amount * 10**(decimals*2) is sqrt(amount) * 10**decimals
+        * U256::from(NearToken::from_near(1).as_yoctonear())
             / U256::from(divisor)
             / U256::exp10((decimals - 18).into()))
         .min(U256::from(cap) * U256::exp10(18));
 
         score.as_u128()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use near_sdk::{
-        test_utils::{accounts, VMContextBuilder},
-        testing_env,
-    };
-
-    #[test]
-    fn test_claim_ref_memeseason() {
-        let context = VMContextBuilder::new()
-            .current_account_id(accounts(0))
-            .predecessor_account_id(accounts(1))
-            .build();
-        testing_env!(context);
-
-        let mut contract = Contract::new(
-            accounts(2),
-            FarmConfig {
-                farm_id: accounts(3),
-                seed_id: "xref".to_string(),
-                factor: U128(11000000000000000000000),
-                cap: U128(200),
-                decimals: 18,
-            },
-            FarmConfig {
-                farm_id: accounts(4),
-                seed_id: "shitzu".to_string(),
-                factor: U128(11000000000000000000000),
-                cap: U128(200),
-                decimals: 18,
-            },
-            FarmConfig {
-                farm_id: accounts(5),
-                seed_id: "lp".to_string(),
-                factor: U128(11000000000000000000000),
-                cap: U128(200),
-                decimals: 18,
-            },
-        );
-
-        contract.claim_ref_memeseason();
     }
 }

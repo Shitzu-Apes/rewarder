@@ -1,5 +1,5 @@
 use helpers::{
-    call,
+    assert_approx_eq, call,
     setup::{setup, SetupResult},
     view, Ether,
 };
@@ -24,7 +24,7 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
     };
 
-    let amount: U128 = Ether::from(1_000_000).into();
+    let amount: U128 = Ether::from(10_000).into();
     call::storage_deposit(&shitzu, alice, None, None).await?;
     call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
     call::storage_deposit(&shitzu, alice, Some(shitzu_staking.id()), None).await?;
@@ -50,12 +50,14 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
     call::claim_ref_memeseason(&alice, memeseason.id()).await?;
 
     let score = view::score_of(&rewarder, alice_nft_token_id.token_id.clone()).await?;
+    let expected_score = U128(18281535648994515539);
 
-    assert!(
-        score > U128(0),
-        "Expected score to be greater than 0, got {}",
-        score.0
-    );
+    assert_approx_eq(
+        score,
+        expected_score,
+        10, // 0.1%
+        &format!("Expected score to be {}, got {}", expected_score.0, score.0),
+    )?;
 
     let checkpoint = view::get_user_checkpoint(&memeseason, alice.id()).await?;
     assert!(

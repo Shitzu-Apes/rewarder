@@ -259,7 +259,7 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let shitzu_config = FarmConfig {
         farm_id: shitzu_staking.id().clone(),
         seed_id: shitzu.id().to_string(),
-        factor: U128("547000000000000000000000".parse().unwrap()),
+        factor: U128(5470000000000000000000000),
         cap: U128(100),
         decimals: 18,
     };
