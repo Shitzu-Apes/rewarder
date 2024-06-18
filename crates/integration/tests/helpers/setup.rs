@@ -12,6 +12,7 @@ use tokio::task::JoinHandle;
 
 use super::call;
 use super::log_tx_result;
+use super::Ether;
 
 const SHITZU_TOKEN_WASM_FILEPATH: &str = "../../res/test_token.wasm";
 const SHITZU_NFT_WASM_FILEPATH: &str = "../../res//shitzu_nft.wasm";
@@ -158,6 +159,7 @@ pub struct FarmConfig {
     pub farm_id: AccountId,
     pub seed_id: String,
     pub factor: U128,
+    pub base: U128,
     pub cap: U128,
     pub decimals: u8,
 }
@@ -248,8 +250,9 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let xref_config = FarmConfig {
         farm_id: xref_staking.id().clone(),
         seed_id: xref.id().to_string(),
-        factor: U128("11000000000000000000000".parse().unwrap()),
-        cap: U128(200),
+        factor: U128(1000000000000000000000000),
+        base: Ether::from(100).into(),
+        cap: Ether::from(200).into(),
         decimals: 18,
     };
 
@@ -259,8 +262,9 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let shitzu_config = FarmConfig {
         farm_id: shitzu_staking.id().clone(),
         seed_id: shitzu.id().to_string(),
-        factor: U128(5470000000000000000000000),
-        cap: U128(100),
+        factor: U128(5000000000000000000000000),
+        base: Ether::from(50).into(),
+        cap: Ether::from(100).into(),
         decimals: 18,
     };
 
@@ -270,8 +274,9 @@ pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let lp_config = FarmConfig {
         farm_id: lp_staking.id().clone(),
         seed_id: mock_lp_token.id().to_string(),
-        factor: U128("17000000000000000000000000".parse().unwrap()),
-        cap: U128(100),
+        factor: U128(10000000000000000000000),
+        base: Ether::from(50).into(),
+        cap: Ether::from(100).into(),
         decimals: 24,
     };
 

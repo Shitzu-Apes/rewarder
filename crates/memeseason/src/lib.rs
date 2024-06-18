@@ -38,13 +38,14 @@ trait Rewarder {
     fn on_track_score(&mut self, primary_nft: TokenId, amount: U128);
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
 #[serde(crate = "near_sdk::serde")]
 pub struct FarmConfig {
     pub farm_id: AccountId,
     pub seed_id: SeedId,
     pub factor: U128,
+    pub base: U128,
     pub cap: U128,
     pub decimals: u8,
 }
@@ -128,12 +129,7 @@ impl Contract {
 
                 // XRef is 18 decimals
                 // amount * 10**18 * (10**24) / (11 * 10**21) = amount * 10**18 / 0.011
-                self.internal_calculate_staking_score(
-                    farmer_seed.free_amount.0,
-                    self.xref.factor.0,
-                    self.xref.cap.0,
-                    self.xref.decimals,
-                )
+                self.internal_calculate_staking_score(farmer_seed.free_amount.0, &self.xref)
             }
             None => 0,
         };
@@ -147,12 +143,7 @@ impl Contract {
 
                 // SHITZU is 18 decimals
                 // amount * 10**18 * (10**24) / (5470 * 10**21) = amount * 10**18 / 5.47
-                self.internal_calculate_staking_score(
-                    farmer_seed.free_amount.0,
-                    self.shitzu.factor.0,
-                    self.shitzu.cap.0,
-                    self.shitzu.decimals,
-                )
+                self.internal_calculate_staking_score(farmer_seed.free_amount.0, &self.shitzu)
             }
             None => 0,
         };
@@ -166,12 +157,7 @@ impl Contract {
 
                 // LP is 24 decimals
                 // amount * 10**24 * (10**24) / (17 * 10**21) = amount * 10**27 / 17
-                self.internal_calculate_staking_score(
-                    farmer_seed.free_amount.0,
-                    self.lp.factor.0,
-                    self.lp.cap.0,
-                    self.lp.decimals,
-                )
+                self.internal_calculate_staking_score(farmer_seed.free_amount.0, &self.lp)
             }
             None => 0,
         };
@@ -198,21 +184,112 @@ impl Contract {
         }
     }
 
-    fn internal_calculate_staking_score(
-        &self,
-        amount: u128,
-        divisor: u128,
-        cap: u128,
-        decimals: u8,
-    ) -> u128 {
+    fn internal_calculate_staking_score(&self, amount: u128, config: &FarmConfig) -> u128 {
         // amount * 10**decimals * (10**24) / (factor * 10**21) = amount * 10**decimals / factor
-        let amount = U256::from(amount) * U256::exp10(decimals.into()); // since we are about to square root it we need to multiply it by 10^decimals
-        let score = (amount.integer_sqrt() // square root of amount * 10**(decimals*2) is sqrt(amount) * 10**decimals
+        let FarmConfig {
+            factor,
+            base,
+            cap,
+            decimals,
+            ..
+        } = config;
+        let amount = U256::from(amount) * U256::exp10(decimals.to_owned().into()); // since we are about to square root it we need to multiply it by 10^decimals
+        let mut score = amount.integer_sqrt() // square root of amount * 10**(decimals*2) is sqrt(amount) * 10**decimals
         * U256::from(NearToken::from_near(1).as_yoctonear())
-            / U256::from(divisor)
-            / U256::exp10((decimals - 18).into()))
-        .min(U256::from(cap) * U256::exp10(18));
+            / U256::from(factor.0)
+            / U256::exp10((decimals - 18).into());
+
+        score = U256::from(base.0) + score;
+        score = score.min(U256::from(cap.0));
 
         score.as_u128()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use near_sdk::test_utils::{accounts, VMContextBuilder};
+    use near_sdk::testing_env;
+
+    fn get_context(predecessor: AccountId) -> VMContextBuilder {
+        let mut builder = VMContextBuilder::new();
+        builder.predecessor_account_id(predecessor);
+        builder
+    }
+
+    #[test]
+    fn test_internal_calculate_staking_score() {
+        // Setup context
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+
+        let xref_config = FarmConfig {
+            farm_id: accounts(2),
+            seed_id: "seed1".to_string(),
+            factor: U128(1000000000000000000000000), // 1 * 10^24
+            base: U128(100000000000000000000),       // 100 * 10^18
+            cap: U128(200000000000000000000),        // 200 * 10^18
+            decimals: 18,
+        };
+        let shitzu_config = FarmConfig {
+            farm_id: accounts(3),
+            seed_id: "seed2".to_string(),
+            factor: U128(5000000000000000000000000), // 5 * 10^24
+            base: U128(50000000000000000000),        // 50 * 10^18
+            cap: U128(100000000000000000000),        // 100 * 10^18
+            decimals: 18,
+        };
+        let lp_config = FarmConfig {
+            farm_id: accounts(4),
+            seed_id: "seed3".to_string(),
+            factor: U128(10000000000000000000000), // 0.01 * 10^24
+            base: U128(50000000000000000000),      // 50 * 10^18
+            cap: U128(100000000000000000000),      // 100 * 10^18
+            decimals: 24,
+        };
+
+        // Create a dummy contract instance
+        let contract = Contract::new(
+            accounts(1),
+            xref_config.clone(),
+            shitzu_config.clone(),
+            lp_config.clone(),
+        );
+
+        // Test cases
+        let test_cases = vec![
+            (
+                100_000000000000000000,
+                &xref_config,
+                110_000000000000000000, // 100 base + 10 extra
+            ),
+            (
+                0,
+                &xref_config,
+                100_000000000000000000, // base
+            ),
+            (
+                10_000_000000000000000000,
+                &shitzu_config,
+                70_000000000000000000, // 50 base + 40 extra
+            ),
+            (0, &lp_config, 50_000000000000000000),
+            (
+                90000000000000000000000, // 0.09, sqrt is 0.3, divided by 0.01 is 30
+                &lp_config,
+                80_000000000000000000, // cap
+            ),
+            (
+                1_000_000_000000000000000000,
+                &lp_config,
+                100_000000000000000000, // cap
+            ),
+        ];
+
+        for (amount, config, expected_score) in test_cases {
+            let score = contract.internal_calculate_staking_score(amount, &config);
+            assert_eq!(score, expected_score);
+        }
     }
 }

@@ -24,7 +24,7 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
     };
 
-    let amount: U128 = Ether::from(10_000).into();
+    let amount: U128 = Ether::from(900).into();
     call::storage_deposit(&shitzu, alice, None, None).await?;
     call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
     call::storage_deposit(&shitzu, alice, Some(shitzu_staking.id()), None).await?;
@@ -50,7 +50,7 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
     call::claim_ref_memeseason(&alice, memeseason.id()).await?;
 
     let score = view::score_of(&rewarder, alice_nft_token_id.token_id.clone()).await?;
-    let expected_score = U128(18281535648994515539);
+    let expected_score = U128(56000000000000000000);
 
     assert_approx_eq(
         score,
