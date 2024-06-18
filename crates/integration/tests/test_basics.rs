@@ -4,7 +4,7 @@ use helpers::{
     events::{
         FtBurn, FtMint, NftStaked, NftUnstaked, RewardSent, ScoreRecorded, ShitzurewarderEventKind,
     },
-    setup::setup,
+    setup::{setup, SetupResult},
     view, Ether,
 };
 use near_sdk::json_types::U128;
@@ -14,20 +14,26 @@ mod helpers;
 #[tokio::test]
 async fn test_only_operator_can_send_shitzu() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (_dao, tgbot, token, _nft, rewarder, accounts) = setup(&worker).await?;
+    let SetupResult {
+        tgbot,
+        shitzu,
+        rewarder,
+        accounts,
+        ..
+    } = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 4 accounts, got {}", accounts.len())
     };
 
     let amount: U128 = Ether::from(1_000_000).into();
-    call::storage_deposit(&token, alice, None, None).await?;
-    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+    call::storage_deposit(&shitzu, alice, None, None).await?;
+    call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
 
-    call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
+    call::mint_token(&shitzu, alice.id(), amount).await?;
+    call::transfer_token(shitzu.id(), alice, rewarder.id(), amount).await?;
 
-    assert_eq!(view::ft_balance_of(&token, rewarder.id()).await?, amount);
+    assert_eq!(view::ft_balance_of(&shitzu, rewarder.id()).await?, amount);
 
     assert!(bob
         .call(rewarder.id(), "send_rewards")
@@ -62,19 +68,26 @@ async fn test_only_operator_can_send_shitzu() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (_dao, tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
+    let SetupResult {
+        tgbot,
+        shitzu,
+        nft,
+        rewarder,
+        accounts,
+        ..
+    } = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
     let amount: U128 = Ether::from(1_000_000).into();
-    call::storage_deposit(&token, alice, None, None).await?;
-    call::storage_deposit(&token, bob, None, None).await?;
-    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+    call::storage_deposit(&shitzu, alice, None, None).await?;
+    call::storage_deposit(&shitzu, bob, None, None).await?;
+    call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
 
-    call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
+    call::mint_token(&shitzu, alice.id(), amount).await?;
+    call::transfer_token(shitzu.id(), alice, rewarder.id(), amount).await?;
 
     let [alice_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
@@ -98,7 +111,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 
     let events = call::send_rewards(&tgbot, rewarder.id(), alice.id(), reward).await?;
     assert_eq!(
-        view::ft_balance_of(&token, alice.id()).await?,
+        view::ft_balance_of(&shitzu, alice.id()).await?,
         U128(reward.0 * 2)
     );
     assert_event_emits(
@@ -129,7 +142,7 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
     assert_eq!(supply.0, reward.0 * 2);
 
     let events = call::send_rewards(&tgbot, rewarder.id(), bob.id(), reward).await?;
-    assert_eq!(view::ft_balance_of(&token, bob.id()).await?, reward);
+    assert_eq!(view::ft_balance_of(&shitzu, bob.id()).await?, reward);
     assert_event_emits(
         &events,
         vec![ShitzurewarderEventKind::RewardSent(RewardSent {
@@ -150,19 +163,25 @@ async fn test_double_reward_nft_staker() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_unstake() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (_dao, _tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
+    let SetupResult {
+        shitzu,
+        nft,
+        rewarder,
+        accounts,
+        ..
+    } = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
     };
 
     let amount: U128 = Ether::from(1_000_000).into();
-    call::storage_deposit(&token, alice, None, None).await?;
-    call::storage_deposit(&token, bob, None, None).await?;
-    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+    call::storage_deposit(&shitzu, alice, None, None).await?;
+    call::storage_deposit(&shitzu, bob, None, None).await?;
+    call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
 
-    call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
+    call::mint_token(&shitzu, alice.id(), amount).await?;
+    call::transfer_token(shitzu.id(), alice, rewarder.id(), amount).await?;
 
     let [alice_token1, alice_token2, ..] = &call::mint_nft(alice, nft.id(), 2).await?[..] else {
         anyhow::bail!("Expected at least 2 token, got less")
@@ -229,7 +248,14 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
     // This test is to make sure that the score of the NFT is persisted after unstaking
     // or even the owner of the NFT is changed and come back to stake again
     let worker = near_workspaces::sandbox().await?;
-    let (_dao, tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
+    let SetupResult {
+        tgbot,
+        shitzu,
+        nft,
+        rewarder,
+        accounts,
+        ..
+    } = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -237,12 +263,12 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 
     let amount: U128 = Ether::from(1_000_000).into();
 
-    call::storage_deposit(&token, alice, None, None).await?;
-    call::storage_deposit(&token, bob, None, None).await?;
-    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+    call::storage_deposit(&shitzu, alice, None, None).await?;
+    call::storage_deposit(&shitzu, bob, None, None).await?;
+    call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
 
-    call::mint_token(&token, alice.id(), amount).await?;
-    call::transfer_token(token.id(), alice, rewarder.id(), amount).await?;
+    call::mint_token(&shitzu, alice.id(), amount).await?;
+    call::transfer_token(shitzu.id(), alice, rewarder.id(), amount).await?;
 
     let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
@@ -373,7 +399,13 @@ async fn test_nft_score_persist() -> anyhow::Result<()> {
 #[tokio::test]
 async fn test_donation_quadruple_score() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
-    let (_dao, _tgbot, token, nft, rewarder, accounts) = setup(&worker).await?;
+    let SetupResult {
+        shitzu,
+        nft,
+        rewarder,
+        accounts,
+        ..
+    } = setup(&worker).await?;
 
     let [alice, bob, ..] = &accounts[..] else {
         anyhow::bail!("Expected at least 2 accounts, got {}", accounts.len())
@@ -381,11 +413,11 @@ async fn test_donation_quadruple_score() -> anyhow::Result<()> {
 
     let amount: U128 = Ether::from(1_000_000).into();
 
-    call::storage_deposit(&token, alice, None, None).await?;
-    call::storage_deposit(&token, bob, None, None).await?;
-    call::storage_deposit(&token, alice, Some(rewarder.id()), None).await?;
+    call::storage_deposit(&shitzu, alice, None, None).await?;
+    call::storage_deposit(&shitzu, bob, None, None).await?;
+    call::storage_deposit(&shitzu, alice, Some(rewarder.id()), None).await?;
 
-    call::mint_token(&token, alice.id(), amount).await?;
+    call::mint_token(&shitzu, alice.id(), amount).await?;
 
     let [nft_token, ..] = &call::mint_nft(alice, nft.id(), 1).await?[..] else {
         anyhow::bail!("Expected at least 1 token, got 0")
@@ -399,7 +431,7 @@ async fn test_donation_quadruple_score() -> anyhow::Result<()> {
         })],
     )?;
 
-    let events = call::donate(alice, token.id(), rewarder.id(), amount).await?;
+    let events = call::donate(alice, shitzu.id(), rewarder.id(), amount).await?;
     assert_eq!(
         view::score_of(&rewarder, nft_token.token_id.clone()).await?,
         U128(amount.0 * 4)

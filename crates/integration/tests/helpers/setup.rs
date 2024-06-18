@@ -77,7 +77,7 @@ pub async fn setup_nft(near: &Account) -> anyhow::Result<Contract> {
     Ok(contract)
 }
 
-pub async fn setup_contract(
+pub async fn setup_rewarder(
     near: &Account,
     owner_id: &AccountId,
     operator_id: &AccountId,
@@ -149,9 +149,16 @@ pub async fn setup_ref_farm(
     Ok(contract)
 }
 
-pub async fn setup(
-    worker: &Worker<Sandbox>,
-) -> anyhow::Result<(Account, Account, Contract, Contract, Contract, Vec<Account>)> {
+pub struct SetupResult {
+    pub dao: Account,
+    pub tgbot: Account,
+    pub shitzu: Contract,
+    pub nft: Contract,
+    pub rewarder: Contract,
+    pub accounts: Vec<Account>,
+}
+
+pub async fn setup(worker: &Worker<Sandbox>) -> anyhow::Result<SetupResult> {
     let near = worker.root_account()?;
     let dao = near
         .create_subaccount("dao")
@@ -168,7 +175,7 @@ pub async fn setup(
 
     let shitzu = setup_token(&near, "SHITZU", "SHITZU", 18).await?;
     let nft = setup_nft(&near).await?;
-    let contract = setup_contract(&near, dao.id(), tgbot.id(), &shitzu, &nft).await?;
+    let rewarder = setup_rewarder(&near, dao.id(), tgbot.id(), &shitzu, &nft).await?;
 
     let ref_admin = near
         .create_subaccount("ref_admin")
@@ -221,5 +228,12 @@ pub async fn setup(
         Err(e) => eprintln!("Error creating account: {}", e),
     });
 
-    Ok((dao, tgbot, shitzu, nft, contract, accounts))
+    Ok(SetupResult {
+        dao,
+        tgbot,
+        shitzu,
+        nft,
+        rewarder,
+        accounts,
+    })
 }
