@@ -3,11 +3,12 @@ mod view;
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{
     borsh::{BorshDeserialize, BorshSerialize},
+    collections::LookupMap,
     env, ext_contract,
     json_types::U128,
     near, require,
     serde::{Deserialize, Serialize},
-    AccountId, NearToken, PanicOnDefault, Promise, PromiseResult,
+    AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseResult,
 };
 use primitive_types::U256;
 
@@ -33,8 +34,9 @@ trait Rewarder {
     fn on_track_score(&mut self, primary_nft: TokenId, amount: U128);
 }
 
-#[derive(BorshSerialize, BorshDeserialize)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize)]
 #[borsh(crate = "near_sdk::borsh")]
+#[serde(crate = "near_sdk::serde")]
 pub struct FarmConfig {
     pub farm_id: AccountId,
     pub seed_id: SeedId,
@@ -50,11 +52,28 @@ pub struct Contract {
     xref: FarmConfig,
     shitzu: FarmConfig,
     lp: FarmConfig,
-    checkpoint: near_sdk::collections::UnorderedMap<AccountId, u64>,
+    checkpoint: LookupMap<AccountId, u64>,
+}
+
+#[derive(BorshStorageKey, BorshSerialize)]
+#[borsh(crate = "near_sdk::borsh")]
+pub enum StorageKey {
+    Checkpoint,
 }
 
 #[near]
 impl Contract {
+    #[init]
+    pub fn new(rewarder: AccountId, xref: FarmConfig, shitzu: FarmConfig, lp: FarmConfig) -> Self {
+        Self {
+            rewarder,
+            xref,
+            shitzu,
+            lp,
+            checkpoint: LookupMap::new(StorageKey::Checkpoint),
+        }
+    }
+
     pub fn claim_ref_memeseason(&mut self) -> Promise {
         require!(
             self.checkpoint
