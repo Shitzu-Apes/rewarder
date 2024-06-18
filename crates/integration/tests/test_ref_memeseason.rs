@@ -16,6 +16,7 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         accounts,
         memeseason,
         shitzu_staking,
+        nft,
         ..
     } = setup(&worker).await?;
 
@@ -46,6 +47,20 @@ async fn test_farmer_can_claim() -> anyhow::Result<()> {
         seed.free_amount.0 > 0,
         "Expected free amount to be greater than 0, got {}",
         seed.free_amount.0
+    );
+
+    let [alice_nft_token_id, ..] = &call::mint_nft(&alice, nft.id(), 1).await?[..] else {
+        anyhow::bail!("Expected at least 1 NFT token, got 0")
+    };
+    call::stake(alice, rewarder.id(), nft.id(), &alice_nft_token_id.token_id).await?;
+    call::claim_ref_memeseason(&alice, memeseason.id()).await?;
+
+    let score = view::score_of(&rewarder, alice_nft_token_id.token_id.clone()).await?;
+
+    assert!(
+        score > U128(0),
+        "Expected score to be greater than 0, got {}",
+        score.0
     );
 
     Ok(())

@@ -6,7 +6,7 @@ use near_sdk::{
     collections::LookupMap,
     env, ext_contract,
     json_types::U128,
-    near, require,
+    log, near, require,
     serde::{Deserialize, Serialize},
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseResult,
 };
@@ -87,13 +87,13 @@ impl Contract {
             rewarder::ext(self.rewarder.clone()).primary_nft_of(env::predecessor_account_id());
 
         let xref_staking = ref_finance::ext(self.xref.farm_id.clone())
-            .get_farmer_seed(env::current_account_id(), self.xref.seed_id.clone());
+            .get_farmer_seed(env::predecessor_account_id(), self.xref.seed_id.clone());
 
         let shitzu_staking = ref_finance::ext(self.shitzu.farm_id.clone())
-            .get_farmer_seed(env::current_account_id(), self.shitzu.seed_id.clone());
+            .get_farmer_seed(env::predecessor_account_id(), self.shitzu.seed_id.clone());
 
         let lp_staking = ref_finance::ext(self.lp.farm_id.clone())
-            .get_farmer_seed(env::current_account_id(), self.lp.seed_id.clone());
+            .get_farmer_seed(env::predecessor_account_id(), self.lp.seed_id.clone());
 
         primary_nft
             .and(xref_staking)
@@ -205,5 +205,50 @@ impl Contract {
         .min(U256::from(cap) * U256::exp10(18));
 
         score.as_u128()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use near_sdk::{
+        test_utils::{accounts, VMContextBuilder},
+        testing_env,
+    };
+
+    #[test]
+    fn test_claim_ref_memeseason() {
+        let context = VMContextBuilder::new()
+            .current_account_id(accounts(0))
+            .predecessor_account_id(accounts(1))
+            .build();
+        testing_env!(context);
+
+        let mut contract = Contract::new(
+            accounts(2),
+            FarmConfig {
+                farm_id: accounts(3),
+                seed_id: "xref".to_string(),
+                factor: U128(11000000000000000000000),
+                cap: U128(200),
+                decimals: 18,
+            },
+            FarmConfig {
+                farm_id: accounts(4),
+                seed_id: "shitzu".to_string(),
+                factor: U128(11000000000000000000000),
+                cap: U128(200),
+                decimals: 18,
+            },
+            FarmConfig {
+                farm_id: accounts(5),
+                seed_id: "lp".to_string(),
+                factor: U128(11000000000000000000000),
+                cap: U128(200),
+                decimals: 18,
+            },
+        );
+
+        contract.claim_ref_memeseason();
     }
 }

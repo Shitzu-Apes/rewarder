@@ -229,3 +229,19 @@ pub async fn stake_seed(
 
     Ok(events)
 }
+
+pub async fn claim_ref_memeseason(
+    staker: &Account,
+    contract: &AccountId,
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "claim_ref_memeseason",
+        staker
+            .call(contract, "claim_ref_memeseason")
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
+
+    Ok(events)
+}
