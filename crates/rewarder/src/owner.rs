@@ -23,6 +23,13 @@ impl Contract {
 
         self.whitelisted_record_score_ids.push(account_id);
     }
+
+    pub fn remove_from_whitelist(&mut self, account_id: AccountId) {
+        self.require_owner();
+
+        self.whitelisted_record_score_ids
+            .retain(|id| id != &account_id);
+    }
 }
 
 impl Contract {
