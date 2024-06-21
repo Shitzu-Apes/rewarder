@@ -13,9 +13,9 @@ use near_sdk::{
 use primitive_types::U256;
 
 #[cfg(not(feature = "integration-test"))]
-pub const DAY: u64 = 60 * 60 * 24 * 1_000_000_000; // ~3 days
+pub const INTERVAL: u64 = 60 * 60 * 16 * 1_000_000_000;
 #[cfg(feature = "integration-test")]
-pub const DAY: u64 = 60 * 1_000_000_000;
+pub const INTERVAL: u64 = 60 * 1_000_000_000;
 
 type SeedId = String;
 
@@ -84,7 +84,7 @@ impl Contract {
             self.checkpoint
                 .get(&env::predecessor_account_id())
                 .map_or(true, |checkpoint| {
-                    env::block_timestamp() - checkpoint > DAY
+                    env::block_timestamp() - checkpoint > INTERVAL
                 }),
             "Too soon to claim the reward.",
         );
@@ -123,7 +123,7 @@ impl Contract {
         let xref_score = match self.parse_promise_result(xref_staking_result) {
             Some(farmer_seed) => {
                 // 120k xref currently staked
-                // sqrt(120k / 1000) = ~11.0 SHITZU per day
+                // sqrt(120k / 1000) = ~11.0 SHITZU per interval
                 // 11 * 100 / 100000 = 0.011
                 // shitstars = Math.min(sqrt(xref_staking) / 0.011, 200)
 
@@ -137,7 +137,7 @@ impl Contract {
         let shitzu_staking_result = env::promise_result(2);
         let shitzu_score = match self.parse_promise_result(shitzu_staking_result) {
             Some(farmer_seed) => {
-                // SHITZU total supply is 300M, supposed 1000 nft holder has equal share, sqrt(300M / 1000) = ~547 SHITZU per day
+                // SHITZU total supply is 300M, supposed 1000 nft holder has equal share, sqrt(300M / 1000) = ~547 SHITZU per interval
                 // 547 * 100 / 10000 = 5.47
                 // shitstars = Math.min(sqrt(shitzu_staking) / 5.47, 100)
 
@@ -151,7 +151,7 @@ impl Contract {
         let lp_staking_result = env::promise_result(3);
         let lp_score = match self.parse_promise_result(lp_staking_result) {
             Some(farmer_seed) => {
-                // Total Supply of LP is 30, so sqrt(30 / 1000) = ~0.17 SHITZU per day
+                // Total Supply of LP is 30, so sqrt(30 / 1000) = ~0.17 SHITZU per interval
                 // 0.17 * 100 / 100000 = 0.00017
                 // shitstars = Math.min(sqrt(lp_staking) / 0.00017, 100)
 
