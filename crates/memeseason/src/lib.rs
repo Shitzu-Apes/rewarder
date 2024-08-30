@@ -175,7 +175,7 @@ impl Contract {
             PromiseResult::Successful(x) => {
                 // let result: Option<FarmerSeed> = x.unwrap_json();
                 if let Ok(result) = near_sdk::serde_json::from_slice::<FarmerSeed>(&x) {
-                    return Some(result);
+                    Some(result)
                 } else {
                     None
                 }
@@ -270,7 +270,7 @@ mod tests {
                 100_000000000000000000, // base
             ),
             (
-                10_000_000000000000000000,
+                10_000_000_000_000_000_000_000,
                 &shitzu_config,
                 70_000000000000000000, // 50 base + 40 extra
             ),
@@ -281,14 +281,14 @@ mod tests {
                 80_000000000000000000, // cap
             ),
             (
-                1_000_000_000000000000000000,
+                1_000_000_000_000_000_000_000_000,
                 &lp_config,
                 100_000000000000000000, // cap
             ),
         ];
 
         for (amount, config, expected_score) in test_cases {
-            let score = contract.internal_calculate_staking_score(amount, &config);
+            let score = contract.internal_calculate_staking_score(amount, config);
             assert_eq!(score, expected_score);
         }
     }
