@@ -2,12 +2,11 @@ mod view;
 
 use near_contract_standards::non_fungible_token::TokenId;
 use near_sdk::{
-    borsh::{BorshDeserialize, BorshSerialize},
+    borsh::BorshSerialize,
     collections::LookupMap,
     env, ext_contract,
     json_types::U128,
     near, require,
-    serde::{Deserialize, Serialize},
     AccountId, BorshStorageKey, NearToken, PanicOnDefault, Promise, PromiseResult,
 };
 use primitive_types::U256;
@@ -15,12 +14,12 @@ use primitive_types::U256;
 #[cfg(not(feature = "integration-test"))]
 pub const INTERVAL: u64 = 60 * 60 * 16 * 1_000_000_000;
 #[cfg(feature = "integration-test")]
-pub const INTERVAL: u64 = 60 * 1_000_000_000;
+pub const INTERVAL: u64 = 10 * 1_000_000_000;
 
 type SeedId = String;
 
-#[derive(Serialize, Deserialize, Default)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Default)]
+#[near(serializers = [json])]
 pub struct FarmerSeed {
     pub free_amount: U128,
 }
@@ -38,9 +37,8 @@ trait Rewarder {
     fn on_track_score(&mut self, primary_nft: TokenId, amount: U128);
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone)]
-#[borsh(crate = "near_sdk::borsh")]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
 pub struct FarmConfig {
     pub farm_id: AccountId,
     pub seed_id: SeedId,
@@ -48,6 +46,13 @@ pub struct FarmConfig {
     pub base: U128,
     pub cap: U128,
     pub decimals: u8,
+}
+
+#[near(serializers = [json])]
+pub struct FarmConfigs {
+    pub xref: FarmConfig,
+    pub shitzu: FarmConfig,
+    pub lp: FarmConfig,
 }
 
 #[near(contract_state)]
@@ -79,11 +84,18 @@ impl Contract {
         }
     }
 
+    #[private]
+    pub fn change_farm_configs(&mut self, xref: FarmConfig, shitzu: FarmConfig, lp: FarmConfig) {
+        self.xref = xref;
+        self.shitzu = shitzu;
+        self.lp = lp;
+    }
+
     pub fn claim_ref_memeseason(&mut self) -> Promise {
         require!(
             self.checkpoint
                 .get(&env::predecessor_account_id())
-                .map_or(true, |checkpoint| {
+                .is_none_or(|checkpoint| {
                     env::block_timestamp() - checkpoint > INTERVAL
                 }),
             "Too soon to claim the reward.",
@@ -119,34 +131,8 @@ impl Contract {
     ) -> Promise {
         let primary_nft = primary_nft.expect("Primary NFT not found");
 
-        let xref_staking_result = env::promise_result(1);
-        let xref_score = match self.parse_promise_result(xref_staking_result) {
-            Some(farmer_seed) => {
-                // 120k xref currently staked
-                // sqrt(120k / 1000) = ~11.0 SHITZU per interval
-                // 11 * 100 / 100000 = 0.011
-                // shitstars = Math.min(sqrt(xref_staking) / 0.011, 200)
-
-                // XRef is 18 decimals
-                // amount * 10**18 * (10**24) / (11 * 10**21) = amount * 10**18 / 0.011
-                self.internal_calculate_staking_score(farmer_seed.free_amount.0, &self.xref)
-            }
-            None => 0,
-        };
-
-        let shitzu_staking_result = env::promise_result(2);
-        let shitzu_score = match self.parse_promise_result(shitzu_staking_result) {
-            Some(farmer_seed) => {
-                // SHITZU total supply is 300M, supposed 1000 nft holder has equal share, sqrt(300M / 1000) = ~547 SHITZU per interval
-                // 547 * 100 / 10000 = 5.47
-                // shitstars = Math.min(sqrt(shitzu_staking) / 5.47, 100)
-
-                // SHITZU is 18 decimals
-                // amount * 10**18 * (10**24) / (5470 * 10**21) = amount * 10**18 / 5.47
-                self.internal_calculate_staking_score(farmer_seed.free_amount.0, &self.shitzu)
-            }
-            None => 0,
-        };
+        let xref_score = 0;
+        let shitzu_score = 0;
 
         let lp_staking_result = env::promise_result(3);
         let lp_score = match self.parse_promise_result(lp_staking_result) {
@@ -173,12 +159,7 @@ impl Contract {
     fn parse_promise_result(&self, promise_result: PromiseResult) -> Option<FarmerSeed> {
         match promise_result {
             PromiseResult::Successful(x) => {
-                // let result: Option<FarmerSeed> = x.unwrap_json();
-                if let Ok(result) = near_sdk::serde_json::from_slice::<FarmerSeed>(&x) {
-                    Some(result)
-                } else {
-                    None
-                }
+                near_sdk::serde_json::from_slice::<FarmerSeed>(&x).ok()
             }
             PromiseResult::Failed => None,
         }

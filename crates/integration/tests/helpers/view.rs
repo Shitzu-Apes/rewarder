@@ -2,6 +2,8 @@ use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::{json_types::U128, serde::Deserialize, AccountId};
 use near_workspaces::Contract;
 
+use super::setup::FarmConfigs;
+
 pub async fn ft_balance_of(contract: &Contract, account_id: &AccountId) -> anyhow::Result<U128> {
     let res = contract
         .call("ft_balance_of")
@@ -85,4 +87,10 @@ pub async fn get_user_checkpoint(
         .await?;
 
     Ok(res.json::<Option<u64>>()?)
+}
+
+pub async fn get_farm_configs(contract: &Contract) -> anyhow::Result<FarmConfigs> {
+    let res = contract.call("get_farm_configs").view().await?;
+
+    Ok(res.json::<FarmConfigs>()?)
 }

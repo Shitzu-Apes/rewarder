@@ -1,8 +1,9 @@
 [package]
 name = "rewarder"
 version = "0.1.0"
-authors = ["pysr <gm@pysr.xyz>"]
-edition = "2021"
+authors = ["pysr <gm@pysr.xyz>", "Mario Reder <mario.reder@pm.me>"]
+edition = "2024"
+repository = "https://github.com/Shitzu-Apes/rewarder"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -12,3 +13,9 @@ anyhow.workspace = true
 near-contract-standards.workspace = true
 near-sdk.workspace = true
 primitive-types.workspace = true
+
+[package.metadata.near.reproducible_build]
+image = "sourcescan/cargo-near:0.16.0-rust-1.86.0"
+image_digest = "sha256:3220302ebb7036c1942e772810f21edd9381edf9a339983da43487c77fbad488"
+passed_env = []
+container_build_command = ["cargo", "near", "build", "non-reproducible-wasm", "--locked"]

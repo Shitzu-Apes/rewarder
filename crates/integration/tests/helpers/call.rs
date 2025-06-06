@@ -3,7 +3,7 @@ use near_sdk::{json_types::U128, AccountId, NearToken};
 use near_workspaces::{Account, Contract};
 use serde_json::json;
 
-use super::{events::ContractEvent, log_tx_result};
+use super::{events::ContractEvent, log_tx_result, setup::FarmConfig};
 
 pub async fn storage_deposit(
     contract: &Contract,
@@ -238,6 +238,25 @@ pub async fn claim_ref_memeseason(
         "claim_ref_memeseason",
         staker
             .call(contract, "claim_ref_memeseason")
+            .max_gas()
+            .transact()
+            .await?,
+    )?;
+
+    Ok(events)
+}
+
+pub async fn change_farm_configs(
+    contract: &Contract,
+    xref: &FarmConfig,
+    shitzu: &FarmConfig,
+    lp: &FarmConfig,
+) -> anyhow::Result<Vec<ContractEvent>> {
+    let (_, events) = log_tx_result(
+        "change_farm_configs",
+        contract
+            .call("change_farm_configs")
+            .args_json((xref, shitzu, lp))
             .max_gas()
             .transact()
             .await?,

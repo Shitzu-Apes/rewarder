@@ -1,18 +1,19 @@
+use fake::Fake;
 use fake::faker::name::raw::*;
 use fake::locales::*;
-use fake::Fake;
 use futures::future::join_all;
-use near_sdk::json_types::U128;
-use near_sdk::serde::Serialize;
 use near_sdk::AccountId;
 use near_sdk::NearToken;
-use near_workspaces::{network::Sandbox, Account, Contract, Worker};
+use near_sdk::json_types::U128;
+use near_sdk::serde::Deserialize;
+use near_sdk::serde::Serialize;
+use near_workspaces::{Account, Contract, Worker, network::Sandbox};
 use serde_json::json;
 use tokio::task::JoinHandle;
 
+use super::Ether;
 use super::call;
 use super::log_tx_result;
-use super::Ether;
 
 const SHITZU_TOKEN_WASM_FILEPATH: &str = "../../res/test_token.wasm";
 const SHITZU_NFT_WASM_FILEPATH: &str = "../../res//shitzu_nft.wasm";
@@ -153,7 +154,7 @@ pub async fn setup_ref_farm(
     Ok(contract)
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FarmConfig {
     pub farm_id: AccountId,
@@ -162,6 +163,14 @@ pub struct FarmConfig {
     pub base: U128,
     pub cap: U128,
     pub decimals: u8,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FarmConfigs {
+    pub xref: FarmConfig,
+    pub shitzu: FarmConfig,
+    pub lp: FarmConfig,
 }
 
 pub async fn setup_memeseason(
