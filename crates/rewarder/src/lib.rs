@@ -11,12 +11,12 @@ use near_contract_standards::{
     non_fungible_token::TokenId,
 };
 use near_sdk::{
+    AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
     borsh::BorshSerialize,
     env,
     json_types::U128,
     near, require,
     store::{LookupMap, TreeMap},
-    AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
 };
 use primitive_types::U256;
 
@@ -187,7 +187,7 @@ mod tests {
     use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
     use near_sdk::{
         json_types::U128,
-        test_utils::{accounts, get_logs, VMContextBuilder},
+        test_utils::{VMContextBuilder, accounts, get_logs},
         testing_env,
     };
 

@@ -1,8 +1,8 @@
 use near_contract_standards::{
     fungible_token::receiver::FungibleTokenReceiver,
-    non_fungible_token::{core::NonFungibleTokenReceiver, TokenId},
+    non_fungible_token::{TokenId, core::NonFungibleTokenReceiver},
 };
-use near_sdk::{env, json_types::U128, near, AccountId, PromiseOrValue};
+use near_sdk::{AccountId, PromiseOrValue, env, json_types::U128, near};
 use primitive_types::U256;
 
 use crate::{Contract, ContractExt};
@@ -51,7 +51,7 @@ impl NonFungibleTokenReceiver for Contract {
             "User already has already staked"
         );
 
-        self.on_stake(previous_owner_id.clone(), token_id.clone());
+        self.internal_on_stake(previous_owner_id.clone(), token_id.clone());
 
         PromiseOrValue::Value(false)
     }
@@ -59,8 +59,8 @@ impl NonFungibleTokenReceiver for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::test_utils::{accounts, VMContextBuilder};
-    use near_sdk::{testing_env, NearToken};
+    use near_sdk::test_utils::{VMContextBuilder, accounts};
+    use near_sdk::{NearToken, testing_env};
 
     use super::*;
 

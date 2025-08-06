@@ -1,9 +1,9 @@
-use crate::{event::RewarderEvent, Contract, ContractExt, GAS_FOR_NFT_TRANSFER};
+use crate::{Contract, ContractExt, GAS_FOR_NFT_TRANSFER, event::RewarderEvent};
 use near_contract_standards::{
     fungible_token::events::{FtBurn, FtMint},
     non_fungible_token::TokenId,
 };
-use near_sdk::{env, ext_contract, near, AccountId, NearToken, Promise};
+use near_sdk::{AccountId, NearToken, Promise, env, ext_contract, near};
 
 #[ext_contract(nft)]
 #[allow(dead_code)]
@@ -44,32 +44,6 @@ impl Contract {
     }
 
     #[private]
-    pub fn on_stake(&mut self, account_id: AccountId, token_id: TokenId) {
-        self.account_to_token_id
-            .set(account_id.clone(), Some(token_id.clone()));
-
-        self.token_id_to_account
-            .set(token_id.clone(), Some(account_id.clone()));
-        self.total_nft_staked += 1;
-
-        let score = *self.scores.get(&token_id).unwrap_or(&0);
-        if score > 0 {
-            FtMint {
-                owner_id: &account_id,
-                amount: score.into(),
-                memo: None,
-            }
-            .emit();
-        }
-
-        RewarderEvent::NftStaked {
-            account_id: account_id.clone(),
-            token_id: token_id.clone(),
-        }
-        .emit();
-    }
-
-    #[private]
     pub fn on_unstake(&mut self, account_id: AccountId, token_id: TokenId) {
         self.account_to_token_id.remove(&account_id);
         self.token_id_to_account.remove(&token_id);
@@ -94,12 +68,39 @@ impl Contract {
     }
 }
 
+impl Contract {
+    pub fn internal_on_stake(&mut self, account_id: AccountId, token_id: TokenId) {
+        self.account_to_token_id
+            .set(account_id.clone(), Some(token_id.clone()));
+
+        self.token_id_to_account
+            .set(token_id.clone(), Some(account_id.clone()));
+        self.total_nft_staked += 1;
+
+        let score = *self.scores.get(&token_id).unwrap_or(&0);
+        if score > 0 {
+            FtMint {
+                owner_id: &account_id,
+                amount: score.into(),
+                memo: None,
+            }
+            .emit();
+        }
+
+        RewarderEvent::NftStaked {
+            account_id: account_id.clone(),
+            token_id: token_id.clone(),
+        }
+        .emit();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use near_contract_standards::non_fungible_token::core::NonFungibleTokenReceiver;
     use near_sdk::{
         json_types::U128,
-        test_utils::{accounts, get_logs, VMContextBuilder},
+        test_utils::{VMContextBuilder, accounts, get_logs},
         testing_env,
     };
 
